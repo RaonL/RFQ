@@ -214,7 +214,7 @@ def normalize_model(model):
     }
 
 
-def extract_threshold(text, keywords):
+def extract_threshold(text, keywords, allowed_units=None, require_condition=True):
     lowered = text.lower()
     for keyword in keywords:
         key = keyword.lower()
@@ -222,8 +222,13 @@ def extract_threshold(text, keywords):
         if idx < 0:
             continue
         window = lowered[idx + len(key) : idx + len(key) + 100]
+        if require_condition and not any(token in window for token in ["이상", "최소", "지원", ">=", "more", "over"]):
+            continue
         found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|k|m)?", window)
         if found:
+            unit = (found.group(2) or "").lower()
+            if allowed_units is not None and unit not in allowed_units:
+                continue
             return parse_requested_number(found.group(0))
     return None
 
@@ -245,22 +250,35 @@ def extract_port_requirement(text, keywords):
 def parse_requirements(text):
     requirements = []
     numeric_checks = [
-        ("l4_gbps", "L4 Throughput", ["l4 throughput", "l4 처리량", "처리 성능", "throughput"], "Gbps"),
-        ("l7_gbps", "L7 Throughput", ["l7 throughput", "l7 처리량", "l7"], "Gbps"),
-        ("l4_cps", "L4 CPS", ["l4 cps", "connections per second", "cps"], "CPS"),
-        ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps", "ssl"], "TPS"),
+        (
+            "l4_gbps",
+            "L4 Throughput",
+            ["l4 throughput", "l4 처리량", "처리 성능", "throughput"],
+            "Gbps",
+            {"gbps", "g"},
+        ),
+        (
+            "l7_gbps",
+            "L7 Throughput",
+            ["l7 throughput", "l7 처리량"],
+            "Gbps",
+            {"gbps", "g"},
+        ),
+        ("l4_cps", "L4 CPS", ["l4 cps", "connections per second", "cps"], "CPS", {"cps", "만", "억", "k", "m"}),
+        ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps"], "TPS", {"tps", "만", "억", "k", "m"}),
         (
             "concurrent_connections",
             "Concurrent Connection",
             ["concurrent connection", "동시 커넥션", "동시 세션", "동시접속", "동시 연결", "session"],
             "",
+            {"만", "억", "k", "m"},
         ),
-        ("ssd_gb", "SSD", ["ssd", "storage", "disk", "스토리지"], "GB"),
-        ("memory_gb", "Memory", ["memory", "메모리", "ram"], "GB"),
+        ("ssd_gb", "SSD", ["ssd", "storage", "disk", "스토리지"], "GB", {"gb", "g"}),
+        ("memory_gb", "Memory", ["memory", "메모리", "ram"], "GB", {"gb", "g"}),
     ]
 
-    for key, label, keywords, unit in numeric_checks:
-        value = extract_threshold(text, keywords)
+    for key, label, keywords, unit, allowed_units in numeric_checks:
+        value = extract_threshold(text, keywords, allowed_units)
         if value is not None:
             requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
 
@@ -526,7 +544,7 @@ def index():
 
         requirements = parse_requirements(requirement_text)
         if not requirements:
-            flash("비교할 스펙 조건을 찾지 못했습니다. L4, L7, SSL TPS, Concurrent Connection처럼 입력해주세요.")
+            flash("하드웨어 비교 조건을 찾지 못했습니다. L4/L7 Throughput, SSL TPS, CPS, 동시 세션, 포트, SSD처럼 수치와 단위가 있는 조건을 입력해주세요.")
             return render_template("index.html", requirement_text=requirement_text, **context)
 
         recommendation, alternatives, evaluations = recommend_model(requirements, reference)
