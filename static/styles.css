@@ -301,9 +301,14 @@ tfoot td {
   font-size: 14px;
 }
 
-.competitor-card.f5-card {
-  border-color: #f1a8b2;
-  background: #fff7f8;
+.competitor-card.f5-pass {
+  border-color: #86d9b5;
+  background: #ecfdf5;
+}
+
+.competitor-card.f5-fail {
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 .summary-grid {

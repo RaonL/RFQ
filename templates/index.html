@@ -162,7 +162,7 @@
                       <div class="competitor-title">대응 경쟁사 제품 비교</div>
                       <div class="competitor-grid">
                         {% for competitor in item.competitors %}
-                          <div class="competitor-card {% if loop.first %}f5-card{% endif %}">
+                          <div class="competitor-card {% if loop.first and item.all_passed %}f5-pass{% elif loop.first %}f5-fail{% endif %}">
                             <strong>{{ competitor.product }}</strong>
                             <span>L4/L7 {{ competitor.l4_l7 }}</span>
                             <span>L4 CPS {{ competitor.l4_cps }}</span>
