@@ -185,6 +185,10 @@ def parse_ports(interface_text):
     return ports
 
 
+def normalize_slash_speed_text(text):
+    return re.sub(r"(\d+)\s+g\b", r"\1g", str(text or "").lower())
+
+
 def display_model_name(model_name):
     name = str(model_name or "").replace("F5 ", "F5 BIG-IP ")
     return re.sub(r"\br(\d)", r"R\1", name)
@@ -210,6 +214,7 @@ def normalize_model(model):
         "l4_gbps": l4,
         "l7_gbps": l7,
         "l4_cps": number_with_unit(specs.get("L4 CPS")),
+        "l7_rps": number_with_unit(specs.get("L7 RPS (HTTP)")),
         "ssl_tps": number_with_unit(
             specs.get("SSL TPS (RSA 2K)") or specs.get("SSL TPS RSA 2K")
         ),
@@ -241,8 +246,20 @@ def extract_threshold(text, keywords, allowed_units=None, require_condition=True
     return None
 
 
+def extract_l4_l7_pair(text):
+    normalized = normalize_slash_speed_text(text)
+    found = re.search(
+        r"l4\s*/\s*l7\s*throughput[^0-9]*(\d+(?:\.\d+)?)\s*(?:gbps|g)\s*/\s*(\d+(?:\.\d+)?)\s*(?:gbps|g)",
+        normalized,
+        re.IGNORECASE,
+    )
+    if not found:
+        return None
+    return float(found.group(1)), float(found.group(2))
+
+
 def extract_port_requirement(text, keywords):
-    lowered = text.lower()
+    lowered = normalize_slash_speed_text(text)
     for keyword in keywords:
         idx = lowered.find(keyword.lower())
         if idx < 0:
@@ -255,8 +272,64 @@ def extract_port_requirement(text, keywords):
     return None
 
 
+def add_port_requirement(requirements, key, label, value):
+    requirements.append({"key": key, "label": label, "value": value, "unit": "Port", "type": "numeric"})
+
+
+def extract_datasheet_port_requirements(text):
+    requirements = []
+    for raw_line in re.split(r"[\n\r•*]+", text):
+        line = normalize_slash_speed_text(raw_line)
+        if "port" not in line and "포트" not in line:
+            continue
+        count_match = re.search(r"(\d+)\s*(?:port|ports|포트)", line, re.IGNORECASE)
+        if not count_match:
+            continue
+        count = int(count_match.group(1))
+        compact = line.replace(" ", "")
+        has_1g = bool(re.search(r"(^|[^0-9])1g\b", compact) or "/1g" in compact)
+        has_10g = bool(re.search(r"(^|[^0-9])10g\b", compact) or re.search(r"(^|[^0-9])10/", compact) or "/10/" in compact)
+        has_25g = bool(re.search(r"(^|[^0-9])25g\b", compact) or re.search(r"(^|[^0-9])25/", compact))
+        has_100g = bool(re.search(r"(^|[^0-9])100g(?:e)?\b", compact) or "100ge" in compact)
+        is_copper = any(token in line for token in ["copper", "utp", "rj45"])
+        is_fiber = any(token in line for token in ["fiber", "sfp", "sfp+", "sfp28"])
+
+        if is_copper:
+            if has_10g:
+                add_port_requirement(requirements, "copper_10g_ports", "10G Copper/UTP/RJ45 Port", count)
+            if has_1g or not has_10g:
+                add_port_requirement(requirements, "copper_1g_ports", "1G Copper/UTP/RJ45 Port", count)
+
+        if is_fiber:
+            if "sfp28" not in line and "sfp+" not in line and "sfp" not in line:
+                if has_100g:
+                    add_port_requirement(requirements, "qsfp28_100g_ports", "100G QSFP28 Port", count)
+                elif has_25g:
+                    add_port_requirement(requirements, "sfp28_25g_ports", "25G SFP28 Port", count)
+                elif has_10g:
+                    add_port_requirement(requirements, "sfp_plus_10g_ports", "10G SFP+ Port", count)
+                elif has_1g:
+                    add_port_requirement(requirements, "sfp_1g_ports", "1G SFP Port", count)
+                continue
+            if has_25g or "sfp28" in line:
+                add_port_requirement(requirements, "sfp28_25g_ports", "25G SFP28 Port", count)
+            if has_10g or "sfp+" in line:
+                add_port_requirement(requirements, "sfp_plus_10g_ports", "10G SFP+ Port", count)
+            if has_1g:
+                add_port_requirement(requirements, "sfp_1g_ports", "1G SFP Port", count)
+            if has_100g:
+                add_port_requirement(requirements, "qsfp28_100g_ports", "100G QSFP28 Port", count)
+
+    return requirements
+
+
 def parse_requirements(text):
     requirements = []
+    throughput_pair = extract_l4_l7_pair(text)
+    if throughput_pair:
+        requirements.append({"key": "l4_gbps", "label": "L4 Throughput", "value": throughput_pair[0], "unit": "Gbps", "type": "numeric"})
+        requirements.append({"key": "l7_gbps", "label": "L7 Throughput", "value": throughput_pair[1], "unit": "Gbps", "type": "numeric"})
+
     numeric_checks = [
         (
             "l4_gbps",
@@ -272,7 +345,8 @@ def parse_requirements(text):
             "Gbps",
             {"gbps", "g"},
         ),
-        ("l4_cps", "L4 CPS", ["l4 cps", "connections per second", "cps"], "CPS", {"cps", "만", "억", "k", "m"}),
+        ("l7_rps", "L7 RPS", ["l7 requests per second", "l7 rps", "requests per second", "rps"], "RPS", {"rps", "만", "억", "k", "m"}),
+        ("l4_cps", "L4 CPS", ["l4 connections per second", "l4 cps", "connections per second", "cps"], "CPS", {"cps", "만", "억", "k", "m"}),
         ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps"], "TPS", {"tps", "만", "억", "k", "m"}),
         (
             "concurrent_connections",
@@ -281,14 +355,16 @@ def parse_requirements(text):
             "",
             {"만", "억", "k", "m"},
         ),
-        ("ssd_gb", "SSD", ["ssd", "storage", "disk", "스토리지"], "GB", {"gb", "g"}),
+        ("ssd_gb", "SSD", ["hard drive", "hard disk", "storage", "disk", "스토리지", "ssd"], "GB", {"gb", "g"}),
         ("memory_gb", "Memory", ["memory", "메모리", "ram"], "GB", {"gb", "g"}),
     ]
 
     for key, label, keywords, unit, allowed_units in numeric_checks:
-        value = extract_threshold(text, keywords, allowed_units)
+        value = extract_threshold(text, keywords, allowed_units, require_condition=False)
         if value is not None:
             requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
+
+    requirements.extend(extract_datasheet_port_requirements(text))
 
     port_checks = [
         ("sfp28_25g_ports", "25G SFP28 Port", ["sfp28", "25g"]),
@@ -340,6 +416,8 @@ def format_requirement_value(req):
         return f"{value / 1_000_000:g}M 이상"
     if req["key"] == "ssl_tps":
         return f"{value:,.0f} TPS 이상"
+    if req["key"] == "l7_rps":
+        return f"{value:,.0f} RPS 이상"
     if req["key"] == "l4_cps":
         return f"{value:,.0f} CPS 이상"
     return f"{value:g}{req['unit']} 이상"
@@ -353,6 +431,8 @@ def format_model_value(model, key):
         return f"{value / 1_000_000:g}M"
     if key == "ssl_tps":
         return f"{value:,.0f} TPS"
+    if key == "l7_rps":
+        return f"{value:,.0f} RPS"
     if key == "l4_cps":
         return f"{value:,.0f} CPS"
     if key in {"l4_gbps", "l7_gbps"}:
