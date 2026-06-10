@@ -80,7 +80,8 @@
         "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
         "Memory": "32 GB",
         "Storage": "480GB M.2 SSD"
-      }
+      },
+      "tier": 1
     },
     {
       "series": "R2000",
@@ -95,7 +96,8 @@
         "Memory": "32 GB",
         "Storage": "480GB M.2 SSD",
         "제안모델이 10G 이하모델일때 대응방식 경쟁제품이 예를 들어 파이오링크 K1800 / K3200 / K3600 같은 1000~3000 시리즈급이면 F5는 보통 r2600로 제안하는 게 가장 현실적입니다. 다만 순수 수치만 보면 F5 r2600도 파이오링크 K3000대보다 한 체급 위입니다. 그래서 제안 포지셔닝은 동급 대체가 아니라 상위 호환 / 향후 확장형 대체로 잡는 게 좋습니다. Throughput 기준으로 보면 K1800 2G → r2600은 약 10배 이상 K3200 6G → r2600은 약 3배 이상 K3600 12G → r2600은 약 1.6배 이상": ""
-      }
+      },
+      "tier": 2
     },
     {
       "series": "R4000",
@@ -109,7 +111,8 @@
         "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
         "Memory": "64 GB",
         "Storage": "480GB M.2 SSD"
-      }
+      },
+      "tier": 3
     },
     {
       "series": "R4000",
@@ -123,7 +126,8 @@
         "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
         "Memory": "64 GB",
         "Storage": "480GB M.2 SSD"
-      }
+      },
+      "tier": 4
     },
     {
       "series": "R5000",
@@ -137,7 +141,8 @@
         "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
         "Memory": "128 GB",
         "CPU (Total)": "18 vCPUs 또는 6 F5OS + 12 Tenancy"
-      }
+      },
+      "tier": 5
     },
     {
       "series": "R5000",
@@ -151,7 +156,8 @@
         "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
         "Memory": "128 GB",
         "CPU / Tenancy": "6 F5OS + 18 Tenancy"
-      }
+      },
+      "tier": 6
     },
     {
       "series": "R5000",
@@ -165,7 +171,8 @@
         "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
         "Memory": "128 GB",
         "CPU / Tenancy": "6 F5OS + 26 Tenancy"
-      }
+      },
+      "tier": 7
     },
     {
       "series": "R10000",
@@ -179,7 +186,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "256 GB",
         "CPU / Tenancy": "12 F5OS + 24 Tenancy"
-      }
+      },
+      "tier": 8
     },
     {
       "series": "R10000",
@@ -193,7 +201,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "256 GB",
         "CPU / Tenancy": "12 F5OS + 28 Tenancy"
-      }
+      },
+      "tier": 9
     },
     {
       "series": "R10000",
@@ -207,7 +216,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "256 GB",
         "CPU / Tenancy": "12 F5OS + 36 Tenancy"
-      }
+      },
+      "tier": 10
     },
     {
       "series": "R12000",
@@ -222,7 +232,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "512 GB",
         "CPU / Tenancy": "12 F5OS + 44 Tenancy"
-      }
+      },
+      "tier": 11
     },
     {
       "series": "R12000",
@@ -237,7 +248,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "512 GB",
         "CPU / Tenancy": "12 F5OS + 52 Tenancy"
-      }
+      },
+      "tier": 12
     },
     {
       "series": "R12000",
@@ -252,7 +264,8 @@
         "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
         "Memory": "512 GB",
         "CPU / Tenancy": "12 F5OS + 60 Tenancy"
-      }
+      },
+      "tier": 13
     }
   ],
   "comparisons": [

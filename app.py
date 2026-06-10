@@ -17,16 +17,31 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-on-render")
 
 
+MODEL_TIER_ORDER = [
+    "F5 r2600",
+    "F5 r2800",
+    "F5 r4600",
+    "F5 r4800",
+    "F5 r5600",
+    "F5 r5800",
+    "F5 r5900",
+    "F5 r10600",
+    "F5 r10800",
+    "F5 r10900",
+    "F5 r12600-DS",
+    "F5 r12800-DS",
+    "F5 r12900-DS",
+]
+MODEL_TIERS = {model.lower(): index + 1 for index, model in enumerate(MODEL_TIER_ORDER)}
+
 QUALITATIVE_FEATURES = {
     "redundant_power": {
         "label": "전원 이중화",
-        "keywords": ["전원", "power", "psu", "이중화", "redundant"],
-        "supported": True,
+        "keywords": ["전원", "power", "psu", "dual power", "redundant power"],
     },
     "redundant_fan": {
         "label": "FAN 이중화/Hot-Swap",
         "keywords": ["fan", "팬", "hot-swap", "hotswap", "hot swap"],
-        "supported": True,
     },
 }
 
@@ -90,16 +105,12 @@ def number_with_unit(value):
         return number * 1_000
     if "m" in text:
         return number * 1_000_000
-    if "g" in text:
-        return number
     return number
 
 
 def parse_requested_number(text):
-    if text is None:
-        return None
-    normalized = str(text).replace(",", "").strip().lower()
-    found = re.search(r"(\d+(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|k|m)?", normalized)
+    normalized = str(text or "").replace(",", "").strip().lower()
+    found = re.search(r"(\d+(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|k|m)?", normalized)
     if not found:
         return None
     number = float(found.group(1))
@@ -128,47 +139,63 @@ def parse_throughput_pair(value):
 def parse_ports(interface_text):
     text = str(interface_text or "").lower()
     ports = {
-        "sfp": 0,
-        "qsfp": 0,
-        "copper": 0,
-        "speed_1g": 0,
-        "speed_10g": 0,
-        "speed_25g": 0,
-        "speed_40g": 0,
-        "speed_100g": 0,
+        "sfp_1g_ports": 0,
+        "sfp_plus_10g_ports": 0,
+        "sfp28_25g_ports": 0,
+        "copper_1g_ports": 0,
+        "copper_10g_ports": 0,
+        "qsfp_40g_ports": 0,
+        "qsfp28_100g_ports": 0,
     }
 
     for count, desc in re.findall(r"(\d+)\s*x\s*([^,]+)", text):
         qty = int(count)
-        if "qsfp" in desc:
-            ports["qsfp"] += qty
-        if "sfp" in desc:
-            ports["sfp"] += qty
-        if "copper" in desc or "utp" in desc or "rj45" in desc:
-            ports["copper"] += qty
-        if "1g" in desc:
-            ports["speed_1g"] += qty
-        if "10g" in desc:
-            ports["speed_10g"] += qty
-        if "25g" in desc:
-            ports["speed_25g"] += qty
-        if "40g" in desc:
-            ports["speed_40g"] += qty
-        if "100g" in desc or "100ge" in desc:
-            ports["speed_100g"] += qty
+        is_copper = any(token in desc for token in ["copper", "utp", "rj45"])
+        is_sfp28 = "sfp28" in desc
+        is_sfp_plus = "sfp+" in desc or "sfp" in desc
+        is_qsfp = "qsfp" in desc
+
+        if is_copper:
+            if "1g" in desc:
+                ports["copper_1g_ports"] += qty
+            if "10g" in desc:
+                ports["copper_10g_ports"] += qty
+            continue
+
+        if is_sfp28 and "25g" in desc:
+            ports["sfp28_25g_ports"] += qty
+        if is_sfp_plus and "10g" in desc:
+            ports["sfp_plus_10g_ports"] += qty
+        if is_sfp_plus and "1g" in desc:
+            ports["sfp_1g_ports"] += qty
+        if is_qsfp and "40g" in desc:
+            ports["qsfp_40g_ports"] += qty
+        if is_qsfp and "100g" in desc:
+            ports["qsfp28_100g_ports"] += qty
 
     return ports
+
+
+def display_model_name(model_name):
+    name = str(model_name or "").replace("F5 ", "F5 BIG-IP ")
+    return re.sub(r"\br(\d)", r"R\1", name)
+
+
+def tier_for_model(model_name):
+    return MODEL_TIERS.get(str(model_name or "").lower(), 999)
 
 
 def normalize_model(model):
     specs = model.get("specs", {})
     l4, l7 = parse_throughput_pair(specs.get("L4/L7 Throughput"))
-    ports = parse_ports(specs.get("인터페이스"))
     model_name = model.get("model", "")
+    ports = parse_ports(specs.get("인터페이스"))
+    tier = int(model.get("tier") or tier_for_model(model_name))
 
     return {
         "model": model_name,
         "display_model": display_model_name(model_name),
+        "tier": tier,
         "series": model.get("series", ""),
         "raw_specs": specs,
         "l4_gbps": l4,
@@ -186,23 +213,17 @@ def normalize_model(model):
     }
 
 
-def display_model_name(model_name):
-    name = str(model_name or "").replace("F5 ", "F5 BIG-IP ")
-    return re.sub(r"\br(\d)", r"R\1", name)
-
-
-def extract_threshold(text, keywords, unit_hint=None):
+def extract_threshold(text, keywords):
     lowered = text.lower()
     for keyword in keywords:
         key = keyword.lower()
         idx = lowered.find(key)
         if idx < 0:
             continue
-        window = lowered[idx + len(key) : idx + len(key) + 90]
-        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|k|m)?", window)
-        if not found:
-            continue
-        return parse_requested_number(found.group(0))
+        window = lowered[idx + len(key) : idx + len(key) + 100]
+        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|k|m)?", window)
+        if found:
+            return parse_requested_number(found.group(0))
     return None
 
 
@@ -212,12 +233,8 @@ def extract_port_requirement(text, keywords):
         idx = lowered.find(keyword.lower())
         if idx < 0:
             continue
-        window = lowered[max(0, idx - 40) : idx + 80]
-        patterns = [
-            r"(\d+)\s*(?:port|ports|포트)",
-            r"(\d+)\s*(?:개|ea)\s*(?:이상)?",
-        ]
-        for pattern in patterns:
+        window = lowered[max(0, idx - 50) : idx + 90]
+        for pattern in [r"(\d+)\s*(?:port|ports|포트)", r"(\d+)\s*(?:개|ea)\s*(?:이상)?"]:
             found = re.search(pattern, window, re.IGNORECASE)
             if found:
                 return int(found.group(1))
@@ -226,21 +243,10 @@ def extract_port_requirement(text, keywords):
 
 def parse_requirements(text):
     requirements = []
-
     numeric_checks = [
-        (
-            "l4_gbps",
-            "L4 Throughput",
-            ["l4 throughput", "l4 처리량", "처리 성능", "throughput"],
-            "Gbps",
-        ),
+        ("l4_gbps", "L4 Throughput", ["l4 throughput", "l4 처리량", "처리 성능", "throughput"], "Gbps"),
         ("l7_gbps", "L7 Throughput", ["l7 throughput", "l7 처리량", "l7"], "Gbps"),
-        (
-            "l4_cps",
-            "L4 CPS",
-            ["l4 cps", "connections per second", "cps"],
-            "CPS",
-        ),
+        ("l4_cps", "L4 CPS", ["l4 cps", "connections per second", "cps"], "CPS"),
         ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps", "ssl"], "TPS"),
         (
             "concurrent_connections",
@@ -253,34 +259,39 @@ def parse_requirements(text):
     ]
 
     for key, label, keywords, unit in numeric_checks:
-        value = extract_threshold(text, keywords, unit)
+        value = extract_threshold(text, keywords)
         if value is not None:
-            requirements.append({"key": key, "label": label, "value": value, "unit": unit})
+            requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
 
     port_checks = [
-        ("sfp", "SFP/SFP+/SFP28 Port", ["sfp28", "sfp+", "sfp"]),
-        ("copper", "UTP/Copper Port", ["utp", "copper", "rj45"]),
-        ("speed_1g", "1G 지원 Port", ["1g"]),
-        ("speed_10g", "10G 지원 Port", ["10g"]),
-        ("speed_25g", "25G 지원 Port", ["25g"]),
-        ("speed_40g", "40G 지원 Port", ["40ge", "40g"]),
-        ("speed_100g", "100G 지원 Port", ["100ge", "100g"]),
+        ("sfp28_25g_ports", "25G SFP28 Port", ["sfp28", "25g"]),
+        ("sfp_plus_10g_ports", "10G SFP+ Port", ["10g sfp+", "sfp+"]),
+        ("sfp_1g_ports", "1G SFP Port", ["1g sfp"]),
+        ("copper_10g_ports", "10G Copper/UTP/RJ45 Port", ["10g copper", "10g utp", "10g rj45"]),
+        ("copper_1g_ports", "1G Copper/UTP/RJ45 Port", ["1g copper", "1g utp", "1g rj45", "utp", "copper", "rj45"]),
+        ("qsfp28_100g_ports", "100G QSFP28 Port", ["100ge", "100g", "qsfp28"]),
+        ("qsfp_40g_ports", "40G QSFP Port", ["40ge", "40g", "qsfp"]),
     ]
 
     for key, label, keywords in port_checks:
+        if key == "copper_1g_ports" and any(
+            token in text.lower() for token in ["10g copper", "10g utp", "10g rj45"]
+        ):
+            continue
         value = extract_port_requirement(text, keywords)
         if value is not None:
-            requirements.append({"key": key, "label": label, "value": value, "unit": "Port"})
+            requirements.append({"key": key, "label": label, "value": value, "unit": "Port", "type": "numeric"})
 
     lowered = text.lower()
-    for key, feature in QUALITATIVE_FEATURES.items():
-        if all(word in lowered for word in ["전원", "이중화"]) and key == "redundant_power":
-            requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
-            continue
-        if any(word in lowered for word in feature["keywords"]) and (
-            "이중화" in lowered or "hot" in lowered or "redundant" in lowered or "dual" in lowered
-        ):
-            requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
+    if any(token in lowered for token in QUALITATIVE_FEATURES["redundant_power"]["keywords"]) and (
+        "이중화" in lowered or "dual" in lowered or "redundant" in lowered
+    ):
+        requirements.append({"key": "redundant_power", "label": "전원 이중화", "value": True, "unit": "", "type": "boolean"})
+
+    if any(token in lowered for token in QUALITATIVE_FEATURES["redundant_fan"]["keywords"]) and (
+        "이중화" in lowered or "hot" in lowered or "dual" in lowered or "redundant" in lowered
+    ):
+        requirements.append({"key": "redundant_fan", "label": "FAN 이중화/Hot-Swap", "value": True, "unit": "", "type": "boolean"})
 
     deduped = []
     seen = set()
@@ -321,42 +332,59 @@ def format_model_value(model, key):
         return f"{value:g}Gbps"
     if key in {"ssd_gb", "memory_gb"}:
         return f"{value:g}GB"
-    if key in {"sfp", "qsfp", "copper", "speed_1g", "speed_10g", "speed_25g", "speed_40g", "speed_100g"}:
-        return f"{int(value)}Port"
+    if key.endswith("_ports"):
+        return f"{int(value or 0)}Port"
     if key in {"redundant_power", "redundant_fan"}:
         return "지원" if value else "확인 필요"
     return str(value)
 
 
+def check_status(actual, required):
+    if required is True:
+        if actual is True:
+            return "충족", "✅ 충족", "요구 조건 지원"
+        return "확인 필요", "⚠️ 확인 필요", "자료상 지원 여부 확인 필요"
+
+    if actual is None:
+        return "확인 필요", "⚠️ 확인 필요", "장비 스펙 데이터 없음"
+    if float(actual) < float(required):
+        return "미충족", "❌ 미충족", "요구 기준보다 낮음"
+    if float(required) > 0 and float(actual) >= float(required) * 1.2:
+        return "여유 있음", "✅ 여유 있음", "요구 기준 대비 20% 이상 여유"
+    return "충족", "✅ 충족", "요구 기준 충족"
+
+
 def evaluate_model(model, requirements):
     checks = []
-    score = 0.0
     for req in requirements:
         actual = model.get(req["key"])
-        if req["value"] is True:
-            passed = bool(actual)
-            score += 1.0 if passed else 0.0
-        else:
-            passed = actual is not None and float(actual) >= float(req["value"])
-            if actual is not None and float(req["value"]) > 0:
-                score += min(float(actual) / float(req["value"]), 1.0)
+        status, result_label, note = check_status(actual, req["value"])
+        passed = status in {"충족", "여유 있음"}
         checks.append(
             {
+                "key": req["key"],
                 "label": req["label"],
                 "required": format_requirement_value(req),
                 "actual": format_model_value(model, req["key"]),
+                "status": status,
+                "result": result_label,
+                "note": note,
                 "passed": passed,
             }
         )
 
+    total = len(checks)
     passed_count = sum(1 for check in checks if check["passed"])
+    failed_checks = [check for check in checks if not check["passed"]]
+    fit_score = round((passed_count / total) * 100, 1) if total else 0
     return {
         "model": model,
         "checks": checks,
         "passed_count": passed_count,
-        "failed_count": len(checks) - passed_count,
-        "all_passed": passed_count == len(checks) and bool(checks),
-        "score": score,
+        "failed_count": total - passed_count,
+        "failed_checks": failed_checks,
+        "fit_score": fit_score,
+        "all_passed": total > 0 and passed_count == total,
     }
 
 
@@ -402,29 +430,69 @@ def recommend_model(requirements, reference):
     evaluations = [evaluate_model(model, requirements) for model in models]
     for evaluation in evaluations:
         evaluation["competitors"] = competitor_summary(evaluation["model"]["model"], reference)
-    evaluations.sort(
-        key=lambda item: (
-            0 if item["all_passed"] else 1,
-            item["failed_count"],
-            -item["score"],
-            item["model"].get("l4_gbps", 0),
-            item["model"].get("ssl_tps", 0),
-        )
-    )
-    return evaluations[0] if evaluations else None, evaluations
+
+    matched = [evaluation for evaluation in evaluations if evaluation["all_passed"]]
+    matched.sort(key=lambda item: item["model"]["tier"])
+    alternatives = sorted(
+        evaluations,
+        key=lambda item: (-item["fit_score"], item["failed_count"], item["model"]["tier"]),
+    )[:3]
+    return (matched[0] if matched else None), alternatives, evaluations
 
 
-def mail_text(recommendation):
-    model = recommendation["model"]["display_model"]
-    if recommendation["all_passed"]:
-        return (
+def summarize_passed(evaluation, limit=5):
+    if not evaluation:
+        return []
+    return [check["label"] for check in evaluation["checks"] if check["passed"]][:limit]
+
+
+def mail_texts(recommendation, alternatives):
+    primary = recommendation or (alternatives[0] if alternatives else None)
+    model = primary["model"]["display_model"] if primary else "확인 필요"
+    passed = summarize_passed(primary)
+    passed_text = ", ".join(passed) if passed else "충족 항목 없음"
+    alternative_names = [item["model"]["display_model"] for item in alternatives if item is not primary][:2]
+    alternative_text = ", ".join(alternative_names) if alternative_names else "대안 모델 없음"
+
+    if recommendation:
+        simple = (
             f"문의 주신 스펙 기준으로는 {model} 모델이 적합합니다.\n"
-            "요구하신 주요 성능 및 구성 조건을 충족하므로 해당 장비로 제안 진행하시면 됩니다."
+            f"주요 충족 조건은 {passed_text}이며, 대안 모델은 {alternative_text}입니다."
         )
-    return (
-        "문의 주신 스펙을 모두 만족하는 F5 rSeries 단일 장비는 현재 등록된 기준 데이터에서 확인되지 않습니다.\n"
-        f"가장 근접한 후보는 {model} 모델이지만, 미충족 항목이 있으므로 상위 구성/복수 장비/요구사항 조정 여부를 추가 확인해야 합니다."
-    )
+        detail = (
+            f"고객 요구 스펙을 등록된 F5 rSeries 기준 데이터와 비교한 결과, {model} 모델이 모든 필수 조건을 충족합니다.\n"
+            f"주요 충족 조건: {passed_text}\n"
+            f"대안 검토 모델: {alternative_text}\n"
+            "해당 모델 기준으로 제안 진행이 가능합니다."
+        )
+        internal = (
+            f"[내부 검토]\n추천 모델: {model}\n적합도: {primary['fit_score']}%\n"
+            f"주요 충족 조건: {passed_text}\n대안 모델: {alternative_text}\n"
+            "검토 의견: 필수 조건을 모두 충족하는 최저 tier 모델입니다."
+        )
+    else:
+        failed = [check["label"] for check in primary["failed_checks"]] if primary else []
+        failed_text = ", ".join(failed) if failed else "확인 필요"
+        simple = (
+            "조건을 모두 만족하는 모델이 없습니다.\n"
+            f"가장 근접한 모델은 {model}이며, 미충족 항목은 {failed_text}입니다."
+        )
+        detail = (
+            "등록된 F5 rSeries 기준 데이터와 비교한 결과, 고객 요구 조건을 모두 만족하는 단일 모델은 없습니다.\n"
+            f"가장 근접한 모델: {model}\n"
+            f"주요 충족 조건: {passed_text}\n"
+            f"미충족 조건: {failed_text}\n"
+            f"대안 검토 모델: {alternative_text}\n"
+            "상위 구성, 복수 장비 구성, 또는 요구 조건 조정 여부를 추가 확인해야 합니다."
+        )
+        internal = (
+            f"[내부 검토]\n결론: 조건을 모두 만족하는 모델 없음\n"
+            f"최근접 모델: {model}\n적합도: {primary['fit_score'] if primary else 0}%\n"
+            f"미충족 조건: {failed_text}\n대안 모델: {alternative_text}\n"
+            "검토 의견: 최종 제안 전 공식 Datasheet 및 구성 가능 여부 확인 필요."
+        )
+
+    return {"simple": simple, "detail": detail, "internal": internal}
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -437,7 +505,8 @@ def index():
             "L7 Throughput 13Gbps 이상\n"
             "Concurrent Connection 19M 이상\n"
             "SSL TPS 7000 이상\n"
-            "1G/10G/25G SFP+ 4Port 이상\n"
+            "25G SFP28 4Port 이상\n"
+            "10G Copper 4Port 이상\n"
             "SSD 480GB 이상\n"
             "전원/FAN 이중화"
         ),
@@ -459,14 +528,15 @@ def index():
             flash("비교할 스펙 조건을 찾지 못했습니다. L4, L7, SSL TPS, Concurrent Connection처럼 입력해주세요.")
             return render_template("index.html", requirement_text=requirement_text, **context)
 
-        recommendation, evaluations = recommend_model(requirements, reference)
+        recommendation, alternatives, evaluations = recommend_model(requirements, reference)
         return render_template(
             "index.html",
             requirement_text=requirement_text,
             requirements=requirements,
             recommendation=recommendation,
-            evaluations=evaluations[:6],
-            mail_body=mail_text(recommendation),
+            alternatives=alternatives,
+            evaluations=evaluations,
+            mail_texts=mail_texts(recommendation, alternatives),
             **context,
         )
 

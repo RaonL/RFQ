@@ -14,6 +14,22 @@ PDF_PATH = Path(
 XLSX_PATH = Path(
     os.getenv("F5_COMPARISON_XLSX_PATH", BASE_DIR / "source" / "r-Series_경쟁사_비교자료(20260504).xlsx")
 )
+MODEL_TIER_ORDER = [
+    "F5 r2600",
+    "F5 r2800",
+    "F5 r4600",
+    "F5 r4800",
+    "F5 r5600",
+    "F5 r5800",
+    "F5 r5900",
+    "F5 r10600",
+    "F5 r10800",
+    "F5 r10900",
+    "F5 r12600-DS",
+    "F5 r12800-DS",
+    "F5 r12900-DS",
+]
+MODEL_TIERS = {model.lower(): index + 1 for index, model in enumerate(MODEL_TIER_ORDER)}
 
 
 def clean(value):
@@ -81,6 +97,7 @@ def extract_comparison():
             f5_models[model_name.lower()] = {
                 "series": sheet.title,
                 "model": model_name,
+                "tier": MODEL_TIERS.get(model_name.lower(), 999),
                 "specs": f5_specs,
             }
 

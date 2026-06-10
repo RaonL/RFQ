@@ -7,10 +7,13 @@
 - 고객 요구 스펙 textarea 입력
 - PDF, XLSX, CSV, TXT 파일 업로드
 - L4/L7 Throughput, SSL TPS, Concurrent Connection, SSD, Port 조건 자동 추출
+- SFP/SFP+/SFP28/Copper 포트 유형 분리 비교
+- 모든 필수 조건을 만족하는 모델 중 최저 tier 모델 추천
+- 조건을 만족하는 모델이 없을 때 근접 모델 3개와 미충족 항목 표시
 - 전원/FAN 이중화 같은 정성 조건 인식
-- F5 rSeries 장비별 충족/미충족 비교
-- 가장 적합한 최소 모델 추천
-- 제안용 메일 문구 자동 생성
+- F5 rSeries 장비별 충족/미충족/여유 있음/확인 필요 비교
+- 간단 답변, 상세 답변, 내부 검토 보고용 메일 문구 자동 생성
+- 경쟁 모델 비교표 접힘 표시
 
 ## 예시 입력
 
@@ -19,7 +22,8 @@ L4 Throughput 20Gbps 이상
 L7 Throughput 13Gbps 이상
 Concurrent Connection 19M 이상
 SSL TPS 7000 이상
-1G/10G/25G SFP+ 4Port 이상
+25G SFP28 4Port 이상
+10G Copper 4Port 이상
 SSD 480GB 이상
 전원/FAN 이중화
 ```
