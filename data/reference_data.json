@@ -1,0 +1,1496 @@
+{
+  "sources": [
+    {
+      "type": "pdf",
+      "name": "F5_rSeries_Appliance_Data_Sheet.pdf",
+      "path_note": "Original source kept outside repository."
+    },
+    {
+      "type": "xlsx",
+      "name": "r-Series competitor comparison 20260504.xlsx",
+      "path_note": "Original source kept outside repository."
+    }
+  ],
+  "pdf_summary": {
+    "source_file": "F5_rSeries_Appliance_Data_Sheet.pdf",
+    "pages": 16,
+    "models_found": [
+      "r10000",
+      "r10600",
+      "r10800",
+      "r10900",
+      "r10920",
+      "r12000",
+      "r12600",
+      "r12800",
+      "r12900",
+      "r2000",
+      "r2600",
+      "r2800",
+      "r4000",
+      "r4600",
+      "r4800",
+      "r5000",
+      "r5600",
+      "r5800",
+      "r5900",
+      "r5920"
+    ],
+    "sections": [
+      {
+        "title": "Key Benefits",
+        "summary": "KEY BENEFITS Future-proof your environment Future-proof your IT infrastructure for the long-term with frictionless migration, flexible licensing and high performance to scale your capacity as you grow. Obtain the lowest TCO Reduce TCO and the infrastructure footprint by consolidating app and security services on a unified, high-performance platform. Accelerate deployment with automation Decrease time spent on manual tasks with rSeries’ fully automatable platform design. Rapidly onboard, configure, and deploy F5 application services via simple, yet powerful declarative interfaces with F5 Automation Toolchain.Secure applications Deliver the SSL capacity required to protect critical data—including enhanced offload of elliptical curve cryptography (ECC) processing to hardware— enabling forward secrecy scaling. Deliver the most effective protection with integrated, one-pas"
+      },
+      {
+        "title": "Standardize Your App Delivery Services",
+        "summary": "STANDARDIZE YOUR APP DELIVERY SERVICES F5 appliances simplify your network and reduce TCO by offloading servers, providing a consistent set of comprehensive application services, and consolidating devices–saving management, power, space, and cooling costs in the data center. The massive performance and scalability of the new F5 rSeries appliance reduces the number of ADCs needed to deliver even the most demanding applications. By offloading computationally intense processes, you can significantly reduce the number of application servers needed. UNMATCHED PERFORMANCE FOR CRITICAL APPLICATIONS Application traffic is growing exponentially, driven by the ongoing growth of remote workforces, increasing numbers of applications, video streaming, and IoT, and increasing pressure on global IT infrastructure resources to deliver unprecedented performance and scalability. Additionally, enc"
+      },
+      {
+        "title": "Gain Flexibility With Multi-Tenancy",
+        "summary": "GAIN FLEXIBILITY WITH MULTI-TENANCY Virtualization and multi-tenant architectures are often implemented to address business and topological requirements, such as being able to consolidate services and acquire or merge existing networks. Multi-tenancy enables customers to host many different F5® BIG-IP® tenants on the same appliance, which may vary in terms of supported versions depending on the needs of particular applications or business requirements. Each tenant can be independently upgraded or patched without impacting other tenants. In addition, multi-tenancy delivers full tenant isolation and failure—independent of traffic, data, and administrative access—for unmatched tenant isolation. Traditionally, F5’s Virtual Clustered Multiprocessing (vCMP) technology gave organizations a virtualization strategy for application delivery and isolating multi-tenant environments on F5"
+      },
+      {
+        "title": "A Modern Platform Architecture Design",
+        "summary": "A MODERN PLATFORM ARCHITECTURE DESIGN F5 rSeries relies on a F5OS (a new Kubernetes-based platform layer) that’s fully integrated with F5’s TMOS software, aligning with your modern architecture plans. Going to a microservice-based platform layer allows rSeries to provide new and exciting features that were not possible in previous generations of F5® BIG-IP® platforms. This layer powers the new platform and is abstracted through F5OS interfaces so you can manage it via familiar CLI, GUI, and API interfaces. This means you can simultaneously run tenants with the current and next generation of BIG-IP software with more modern microservice-based BIG-IP software that will be introduced in the future. rSeries is more aligned to modern architectures, which allows you to future-proof your deployments and environments. Figure 1: F5 rSeries Architecture. Next-Gen BIG-IP application service"
+      },
+      {
+        "title": "Purpose-Built For Automation",
+        "summary": "Purpose-built for automation 6 FIPS compliance at scale 7 Migrating to F5 rSeriesF5 rSeries ApplianceDATA SHEET F5 rSeries Appliance2STANDARDIZE YOUR APP DELIVERY SERVICES F5 appliances simplify your network and reduce TCO by offloading servers, providing a consistent set of comprehensive application services, and consolidating devices–saving management, power, space, and cooling costs in the data center. The massive performance and scalability of the new F5 rSeries appliance reduces the number of ADCs needed to deliver even the most demanding applications. By offloading computationally intense processes, you can significantly reduce the number of application servers needed. UNMATCHED PERFORMANCE FOR CRITICAL APPLICATIONS Application traffic is growing exponentially, driven by the ongoing growth of remote workforces, increasing numbers of applications, video streaming, and IoT, and"
+      },
+      {
+        "title": "Fips Compliance At Scale",
+        "summary": "FIPS compliance at scale 7 Migrating to F5 rSeriesF5 rSeries ApplianceDATA SHEET F5 rSeries Appliance2STANDARDIZE YOUR APP DELIVERY SERVICES F5 appliances simplify your network and reduce TCO by offloading servers, providing a consistent set of comprehensive application services, and consolidating devices–saving management, power, space, and cooling costs in the data center. The massive performance and scalability of the new F5 rSeries appliance reduces the number of ADCs needed to deliver even the most demanding applications. By offloading computationally intense processes, you can significantly reduce the number of application servers needed. UNMATCHED PERFORMANCE FOR CRITICAL APPLICATIONS Application traffic is growing exponentially, driven by the ongoing growth of remote workforces, increasing numbers of applications, video streaming, and IoT, and increasing pressure on global"
+      },
+      {
+        "title": "Migrating To F5 Rseries",
+        "summary": "Migrating to F5 rSeriesF5 rSeries ApplianceDATA SHEET F5 rSeries Appliance2STANDARDIZE YOUR APP DELIVERY SERVICES F5 appliances simplify your network and reduce TCO by offloading servers, providing a consistent set of comprehensive application services, and consolidating devices–saving management, power, space, and cooling costs in the data center. The massive performance and scalability of the new F5 rSeries appliance reduces the number of ADCs needed to deliver even the most demanding applications. By offloading computationally intense processes, you can significantly reduce the number of application servers needed. UNMATCHED PERFORMANCE FOR CRITICAL APPLICATIONS Application traffic is growing exponentially, driven by the ongoing growth of remote workforces, increasing numbers of applications, video streaming, and IoT, and increasing pressure on global IT infrastructure resource"
+      }
+    ]
+  },
+  "f5_models": [
+    {
+      "series": "R2000",
+      "model": "F5 r2600",
+      "specs": {
+        "L4/L7 Throughput": "20G / 13G",
+        "L4 CPS": "170K",
+        "L7 RPS (HTTP)": "475K",
+        "SSL TPS (RSA 2K)": "7K",
+        "동시 커넥션": "19M",
+        "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+        "Memory": "32 GB",
+        "Storage": "480GB M.2 SSD"
+      }
+    },
+    {
+      "series": "R2000",
+      "model": "F5 r2800",
+      "specs": {
+        "L4/L7 Throughput": "25G / 17G",
+        "L4 CPS": "350K",
+        "L7 RPS (HTTP)": "875K",
+        "SSL TPS (RSA 2K)": "15K",
+        "동시 커넥션": "19M",
+        "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+        "Memory": "32 GB",
+        "Storage": "480GB M.2 SSD",
+        "제안모델이 10G 이하모델일때 대응방식 경쟁제품이 예를 들어 파이오링크 K1800 / K3200 / K3600 같은 1000~3000 시리즈급이면 F5는 보통 r2600로 제안하는 게 가장 현실적입니다. 다만 순수 수치만 보면 F5 r2600도 파이오링크 K3000대보다 한 체급 위입니다. 그래서 제안 포지셔닝은 동급 대체가 아니라 상위 호환 / 향후 확장형 대체로 잡는 게 좋습니다. Throughput 기준으로 보면 K1800 2G → r2600은 약 10배 이상 K3200 6G → r2600은 약 3배 이상 K3600 12G → r2600은 약 1.6배 이상": ""
+      }
+    },
+    {
+      "series": "R4000",
+      "model": "F5 r4600",
+      "specs": {
+        "L4/L7 Throughput": "40G / 30G",
+        "L4 CPS": "500K",
+        "L7 RPS (HTTP)": "1.3M",
+        "SSL TPS (RSA 2K)": "30K",
+        "동시 커넥션": "38M",
+        "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+        "Memory": "64 GB",
+        "Storage": "480GB M.2 SSD"
+      }
+    },
+    {
+      "series": "R4000",
+      "model": "F5 r4800",
+      "specs": {
+        "L4/L7 Throughput": "50G / 40G",
+        "L4 CPS": "750K",
+        "L7 RPS (HTTP)": "1.8M",
+        "SSL TPS (RSA 2K)": "45K",
+        "동시 커넥션": "38M",
+        "인터페이스": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+        "Memory": "64 GB",
+        "Storage": "480GB M.2 SSD"
+      }
+    },
+    {
+      "series": "R5000",
+      "model": "F5 r5600",
+      "specs": {
+        "L4/L7 Throughput": "95G / 60G",
+        "L4 CPS": "1M",
+        "L7 RPS (HTTP)": "2.5M",
+        "SSL TPS (RSA 2K)": "60K",
+        "동시 커넥션": "75M",
+        "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+        "Memory": "128 GB",
+        "CPU (Total)": "18 vCPUs 또는 6 F5OS + 12 Tenancy"
+      }
+    },
+    {
+      "series": "R5000",
+      "model": "F5 r5800",
+      "specs": {
+        "L4/L7 Throughput": "95G / 85G",
+        "L4 CPS": "1.4M",
+        "L7 RPS (HTTP)": "3.3M",
+        "SSL TPS (RSA 2K)": "80K",
+        "동시 커넥션": "85M",
+        "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+        "Memory": "128 GB",
+        "CPU / Tenancy": "6 F5OS + 18 Tenancy"
+      }
+    },
+    {
+      "series": "R5000",
+      "model": "F5 r5900",
+      "specs": {
+        "L4/L7 Throughput": "95G / 95G",
+        "L4 CPS": "1.8M",
+        "L7 RPS (HTTP)": "4.3M",
+        "SSL TPS (RSA 2K)": "100K",
+        "동시 커넥션": "100M",
+        "인터페이스": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+        "Memory": "128 GB",
+        "CPU / Tenancy": "6 F5OS + 26 Tenancy"
+      }
+    },
+    {
+      "series": "R10000",
+      "model": "F5 r10600",
+      "specs": {
+        "L4/L7 Throughput": "190G / 125G",
+        "L4 CPS": "1.9M",
+        "L7 RPS (HTTP)": "4.5M",
+        "SSL TPS (RSA 2K)": "115K",
+        "동시 커넥션": "145M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "256 GB",
+        "CPU / Tenancy": "12 F5OS + 24 Tenancy"
+      }
+    },
+    {
+      "series": "R10000",
+      "model": "F5 r10800",
+      "specs": {
+        "L4/L7 Throughput": "190G / 145G",
+        "L4 CPS": "2.1M",
+        "L7 RPS (HTTP)": "5.5M",
+        "SSL TPS (RSA 2K)": "150K",
+        "동시 커넥션": "160M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "256 GB",
+        "CPU / Tenancy": "12 F5OS + 28 Tenancy"
+      }
+    },
+    {
+      "series": "R10000",
+      "model": "F5 r10900",
+      "specs": {
+        "L4/L7 Throughput": "190G / 190G",
+        "L4 CPS": "2.5M",
+        "L7 RPS (HTTP)": "6.6M",
+        "SSL TPS (RSA 2K)": "200K",
+        "동시 커넥션": "180M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "256 GB",
+        "CPU / Tenancy": "12 F5OS + 36 Tenancy"
+      }
+    },
+    {
+      "series": "R12000",
+      "model": "F5 r12600-DS",
+      "specs": {
+        "L4/L7 Throughput": "195G / 146G",
+        "L4 CPS": "2.8M",
+        "L7 RPS (HTTP)": "7M",
+        "SSL TPS RSA 2K": "270K",
+        "SSL Bulk": "95G",
+        "동시 커넥션": "399M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "512 GB",
+        "CPU / Tenancy": "12 F5OS + 44 Tenancy"
+      }
+    },
+    {
+      "series": "R12000",
+      "model": "F5 r12800-DS",
+      "specs": {
+        "L4/L7 Throughput": "195G / 195G",
+        "L4 CPS": "3.1M",
+        "L7 RPS (HTTP)": "8.5M",
+        "SSL TPS RSA 2K": "335K",
+        "SSL Bulk": "100G",
+        "동시 커넥션": "399M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "512 GB",
+        "CPU / Tenancy": "12 F5OS + 52 Tenancy"
+      }
+    },
+    {
+      "series": "R12000",
+      "model": "F5 r12900-DS",
+      "specs": {
+        "L4/L7 Throughput": "195G / 195G",
+        "L4 CPS": "3.5M",
+        "L7 RPS (HTTP)": "10.5M",
+        "SSL TPS RSA 2K": "400K",
+        "SSL Bulk": "110G",
+        "동시 커넥션": "399M",
+        "인터페이스": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+        "Memory": "512 GB",
+        "CPU / Tenancy": "12 F5OS + 60 Tenancy"
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "series": "R2000",
+      "f5_model": "F5 r2600",
+      "competitors": [
+        "A10 Thunder 1060S",
+        "NetScaler 9210",
+        "파이오링크 PAS-K5200",
+        "알테온 D-5208S"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r2600": "20G / 13G",
+            "A10 Thunder 1060S": "10G~35G",
+            "NetScaler 9210": "10G / 10G",
+            "파이오링크 PAS-K5200": "16G / 12G",
+            "알테온 D-5208S": "26G / 20G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r2600": "170K",
+            "A10 Thunder 1060S": "550K~800K",
+            "NetScaler 9210": "정보 없음",
+            "파이오링크 PAS-K5200": "700K",
+            "알테온 D-5208S": "630K"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r2600": "475K",
+            "A10 Thunder 1060S": "200K~480K",
+            "NetScaler 9210": "2.91M",
+            "파이오링크 PAS-K5200": "정보 없음",
+            "알테온 D-5208S": "850K"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r2600": "7K",
+            "A10 Thunder 1060S": "15K~28K",
+            "NetScaler 9210": "45K",
+            "파이오링크 PAS-K5200": "정보 없음",
+            "알테온 D-5208S": "20.5K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r2600": "19M",
+            "A10 Thunder 1060S": "32M~128M",
+            "NetScaler 9210": "55M",
+            "파이오링크 PAS-K5200": "18M",
+            "알테온 D-5208S": "정보 없음"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r2600": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+            "A10 Thunder 1060S": "2x 25G SFP28, 4x 10G SFP+",
+            "NetScaler 9210": "8x 50G SFP56",
+            "파이오링크 PAS-K5200": "16x 10G SFP+, 8x 1G Copper",
+            "알테온 D-5208S": "2x 10G SFP+, 8x 1G RJ45"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r2600": "32 GB",
+            "A10 Thunder 1060S": "32 GB",
+            "NetScaler 9210": "128 GB",
+            "파이오링크 PAS-K5200": "16 GB",
+            "알테온 D-5208S": "16~32 GB"
+          }
+        },
+        {
+          "metric": "Storage",
+          "values": {
+            "F5 r2600": "480GB M.2 SSD",
+            "A10 Thunder 1060S": "SSD",
+            "NetScaler 9210": "정보 없음",
+            "파이오링크 PAS-K5200": "120GB SSD",
+            "알테온 D-5208S": "0.5TB/1TB SSD"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R2000",
+      "f5_model": "F5 r2800",
+      "competitors": [
+        "A10 Thunder 3350-E",
+        "NetScaler MPX 9230",
+        "파이오링크 PAS-K5400",
+        "알테온 D-5208S"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r2800": "25G / 17G",
+            "A10 Thunder 3350-E": "30G / 30G",
+            "NetScaler MPX 9230": "30G",
+            "파이오링크 PAS-K5400": "30G / 20G",
+            "알테온 D-5208S": "26G / 20G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r2800": "350K",
+            "A10 Thunder 3350-E": "800K",
+            "NetScaler MPX 9230": "정보 없음",
+            "파이오링크 PAS-K5400": "1M",
+            "알테온 D-5208S": "630K"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r2800": "875K",
+            "A10 Thunder 3350-E": "330K",
+            "NetScaler MPX 9230": "3.731M",
+            "파이오링크 PAS-K5400": "정보 없음",
+            "알테온 D-5208S": "850K"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r2800": "15K",
+            "A10 Thunder 3350-E": "28K",
+            "NetScaler MPX 9230": "62K",
+            "파이오링크 PAS-K5400": "정보 없음",
+            "알테온 D-5208S": "20.5K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r2800": "19M",
+            "A10 Thunder 3350-E": "64M",
+            "NetScaler MPX 9230": "55.5M",
+            "파이오링크 PAS-K5400": "36M",
+            "알테온 D-5208S": "50M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r2800": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+            "A10 Thunder 3350-E": "8x 10G SFP+ + 4x 10G SFP+, 1G Copper/Fiber",
+            "NetScaler MPX 9230": "8x 50G SFP56",
+            "파이오링크 PAS-K5400": "16x 10G SFP+, 2x 40G 옵션",
+            "알테온 D-5208S": "2x 10G SFP+, 8x 1G RJ45"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r2800": "32 GB",
+            "A10 Thunder 3350-E": "16 GB",
+            "NetScaler MPX 9230": "128 GB",
+            "파이오링크 PAS-K5400": "32 GB",
+            "알테온 D-5208S": "16~32 GB"
+          }
+        },
+        {
+          "metric": "Storage",
+          "values": {
+            "F5 r2800": "480GB M.2 SSD",
+            "A10 Thunder 3350-E": "SSD",
+            "NetScaler MPX 9230": "정보 없음",
+            "파이오링크 PAS-K5400": "120GB SSD",
+            "알테온 D-5208S": "0.5TB / 1TB SSD"
+          }
+        },
+        {
+          "metric": "제안모델이 10G 이하모델일때 대응방식 경쟁제품이 예를 들어 파이오링크 K1800 / K3200 / K3600 같은 1000~3000 시리즈급이면 F5는 보통 r2600로 제안하는 게 가장 현실적입니다. 다만 순수 수치만 보면 F5 r2600도 파이오링크 K3000대보다 한 체급 위입니다. 그래서 제안 포지셔닝은 동급 대체가 아니라 상위 호환 / 향후 확장형 대체로 잡는 게 좋습니다. Throughput 기준으로 보면 K1800 2G → r2600은 약 10배 이상 K3200 6G → r2600은 약 3배 이상 K3600 12G → r2600은 약 1.6배 이상",
+          "values": {
+            "F5 r2800": "",
+            "A10 Thunder 3350-E": "",
+            "NetScaler MPX 9230": "",
+            "파이오링크 PAS-K5400": "",
+            "알테온 D-5208S": ""
+          }
+        }
+      ]
+    },
+    {
+      "series": "R4000",
+      "f5_model": "F5 r4600",
+      "competitors": [
+        "A10 Thunder 3350",
+        "NetScaler MPX 9230",
+        "파이오링크 PAS-K5600",
+        "알테온 D-5820SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r4600": "40G / 30G",
+            "A10 Thunder 3350": "40G / 40G",
+            "NetScaler MPX 9230": "30G",
+            "파이오링크 PAS-K5600": "50G / 30G",
+            "알테온 D-5820SL": "40G / 32G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r4600": "500K",
+            "A10 Thunder 3350": "1M",
+            "NetScaler MPX 9230": "정보 없음",
+            "파이오링크 PAS-K5600": "1.4M",
+            "알테온 D-5820SL": "525K"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r4600": "1.3M",
+            "A10 Thunder 3350": "500K",
+            "NetScaler MPX 9230": "3.731M",
+            "파이오링크 PAS-K5600": "정보 없음",
+            "알테온 D-5820SL": "930K"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r4600": "30K",
+            "A10 Thunder 3350": "28K",
+            "NetScaler MPX 9230": "62K",
+            "파이오링크 PAS-K5600": "정보 없음",
+            "알테온 D-5820SL": "20K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r4600": "38M",
+            "A10 Thunder 3350": "96M",
+            "NetScaler MPX 9230": "55.5M",
+            "파이오링크 PAS-K5600": "40M",
+            "알테온 D-5820SL": "44M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r4600": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+            "A10 Thunder 3350": "4x 25G SFP28, 4x 10G SFP+",
+            "NetScaler MPX 9230": "8x 50G SFP56",
+            "파이오링크 PAS-K5600": "16x 10G SFP+, 2x 40G 옵션",
+            "알테온 D-5820SL": "4x 25/10G SFP28, 4x 10G SFP+, 12x 1G SFP, 8x 1G RJ45"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r4600": "64 GB",
+            "A10 Thunder 3350": "32 GB",
+            "NetScaler MPX 9230": "128 GB",
+            "파이오링크 PAS-K5600": "64 GB",
+            "알테온 D-5820SL": "32 GB"
+          }
+        },
+        {
+          "metric": "Storage",
+          "values": {
+            "F5 r4600": "480GB M.2 SSD",
+            "A10 Thunder 3350": "SSD",
+            "NetScaler MPX 9230": "정보 없음",
+            "파이오링크 PAS-K5600": "120GB SSD",
+            "알테온 D-5820SL": "SSD"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R4000",
+      "f5_model": "F5 r4800",
+      "competitors": [
+        "A10 Thunder 3350S",
+        "NetScaler 9200Z",
+        "파이오링크 PAS-K5600",
+        "알테온 D-5820SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r4800": "50G / 40G",
+            "A10 Thunder 3350S": "50G / 50G",
+            "NetScaler 9200Z": "10~95G",
+            "파이오링크 PAS-K5600": "50G / 30G",
+            "알테온 D-5820SL": "40G / 32G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r4800": "750K",
+            "A10 Thunder 3350S": "2M",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K5600": "1.4M",
+            "알테온 D-5820SL": "525K"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r4800": "1.8M",
+            "A10 Thunder 3350S": "750K",
+            "NetScaler 9200Z": "최대 6.8M",
+            "파이오링크 PAS-K5600": "정보 없음",
+            "알테온 D-5820SL": "930K"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r4800": "45K",
+            "A10 Thunder 3350S": "60K",
+            "NetScaler 9200Z": "최대 112K",
+            "파이오링크 PAS-K5600": "정보 없음",
+            "알테온 D-5820SL": "20K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r4800": "38M",
+            "A10 Thunder 3350S": "128M",
+            "NetScaler 9200Z": "59M",
+            "파이오링크 PAS-K5600": "40M",
+            "알테온 D-5820SL": "44M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r4800": "4x 25G/10G SFP28, 4x 10G/1G Copper",
+            "A10 Thunder 3350S": "8x 10G SFP+ + 4x 10G SFP+, 1G Copper/Fiber",
+            "NetScaler 9200Z": "8x 50G SFP56",
+            "파이오링크 PAS-K5600": "16x 10G SFP+, 2x 40G 옵션",
+            "알테온 D-5820SL": "4x 25/10G SFP28, 4x 10G SFP+, 12x 1G SFP, 8x 1G RJ45"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r4800": "64 GB",
+            "A10 Thunder 3350S": "64 GB",
+            "NetScaler 9200Z": "128 GB",
+            "파이오링크 PAS-K5600": "64 GB",
+            "알테온 D-5820SL": "32 GB"
+          }
+        },
+        {
+          "metric": "Storage",
+          "values": {
+            "F5 r4800": "480GB M.2 SSD",
+            "A10 Thunder 3350S": "SSD",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K5600": "120GB SSD",
+            "알테온 D-5820SL": "SSD"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R5000",
+      "f5_model": "F5 r5600",
+      "competitors": [
+        "A10 Thunder 4440",
+        "NetScaler 9200Z",
+        "파이오링크 PAS-K11000",
+        "알테온 D-6300HD"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r5600": "95G / 60G",
+            "A10 Thunder 4440": "78G / 70G",
+            "NetScaler 9200Z": "10~95G",
+            "파이오링크 PAS-K11000": "100G / 60G",
+            "알테온 D-6300HD": "90G / 90G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r5600": "1M",
+            "A10 Thunder 4440": "2M",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K11000": "2.6M",
+            "알테온 D-6300HD": "1.4M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r5600": "2.5M",
+            "A10 Thunder 4440": "750K",
+            "NetScaler 9200Z": "최대 6.8M",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "2.5M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r5600": "60K",
+            "A10 Thunder 4440": "N/A (S/W 처리)",
+            "NetScaler 9200Z": "112K",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "91K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r5600": "75M",
+            "A10 Thunder 4440": "128M",
+            "NetScaler 9200Z": "59M",
+            "파이오링크 PAS-K11000": "60M",
+            "알테온 D-6300HD": "84M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r5600": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+            "A10 Thunder 4440": "4x 40G QSFP+, 24x 10G SFP+",
+            "NetScaler 9200Z": "8x 50G SFP56",
+            "파이오링크 PAS-K11000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-6300HD": "4x 25G SFP28, 모듈형 옵션"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r5600": "128 GB",
+            "A10 Thunder 4440": "32 GB",
+            "NetScaler 9200Z": "128 GB",
+            "파이오링크 PAS-K11000": "128 GB",
+            "알테온 D-6300HD": "32GB (Max 128G)"
+          }
+        },
+        {
+          "metric": "CPU (Total)",
+          "values": {
+            "F5 r5600": "18 vCPUs 또는 6 F5OS + 12 Tenancy",
+            "A10 Thunder 4440": "6-Core Xeon",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "6-Core Intel"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R5000",
+      "f5_model": "F5 r5800",
+      "competitors": [
+        "A10 Thunder 5440",
+        "NetScaler 9200Z",
+        "파이오링크 PAS-K11000",
+        "알테온 D-6300HD"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r5800": "95G / 85G",
+            "A10 Thunder 5440": "100G / 100G",
+            "NetScaler 9200Z": "10~95G",
+            "파이오링크 PAS-K11000": "100G(최대200G) / 60G",
+            "알테온 D-6300HD": "90G / 90G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r5800": "1.4M",
+            "A10 Thunder 5440": "3M",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K11000": "2.6M",
+            "알테온 D-6300HD": "1.4M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r5800": "3.3M",
+            "A10 Thunder 5440": "950K",
+            "NetScaler 9200Z": "최대 6.8M",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "2.5M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r5800": "80K",
+            "A10 Thunder 5440": "N/A(S/W 처리)",
+            "NetScaler 9200Z": "112K",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "91K 또는 43K 조건별"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r5800": "85M",
+            "A10 Thunder 5440": "256M",
+            "NetScaler 9200Z": "59M",
+            "파이오링크 PAS-K11000": "60M",
+            "알테온 D-6300HD": "84M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r5800": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+            "A10 Thunder 5440": "4x 40G QSFP+, 24x 10G SFP+",
+            "NetScaler 9200Z": "8x 50G SFP56",
+            "파이오링크 PAS-K11000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-6300HD": "4x 25G SFP28, 모듈형 옵션"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r5800": "128 GB",
+            "A10 Thunder 5440": "64 GB",
+            "NetScaler 9200Z": "128 GB",
+            "파이오링크 PAS-K11000": "128 GB(옵션 256GB)",
+            "알테온 D-6300HD": "32GB(Max 128GB)"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r5800": "6 F5OS + 18 Tenancy",
+            "A10 Thunder 5440": "12-Core Xeon",
+            "NetScaler 9200Z": "정보 없음",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-6300HD": "6-Core Intel"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R5000",
+      "f5_model": "F5 r5900",
+      "competitors": [
+        "A10 Thunder 5840",
+        "NetScaler 16000Z",
+        "파이오링크 PAS-K11000",
+        "알테온 D-8600S"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r5900": "95G / 95G",
+            "A10 Thunder 5840": "115G / 113G",
+            "NetScaler 16000Z": "30~250G",
+            "파이오링크 PAS-K11000": "100G(최대200G) / 60G",
+            "알테온 D-8600S": "200G / 150G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r5900": "1.8M",
+            "A10 Thunder 5840": "4M",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K11000": "2.6M",
+            "알테온 D-8600S": "3.6M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r5900": "4.3M",
+            "A10 Thunder 5840": "1.5M",
+            "NetScaler 16000Z": "최대 7.5M",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-8600S": "5.8M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r5900": "100K",
+            "A10 Thunder 5840": "N/A(S/W 처리)",
+            "NetScaler 16000Z": "최대 280K",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-8600S": "110K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r5900": "100M",
+            "A10 Thunder 5840": "256M",
+            "NetScaler 16000Z": "53M / 104M",
+            "파이오링크 PAS-K11000": "60M",
+            "알테온 D-8600S": "정보 없음"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r5900": "2x 100G/40G QSFP28, 8x 25G/10G SFP28",
+            "A10 Thunder 5840": "4x 40G QSFP+, 24x 10G SFP+",
+            "NetScaler 16000Z": "4x 100G QSFP28, 8x 25G SFP28",
+            "파이오링크 PAS-K11000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-8600S": "공개자료 기준 100G/25G 옵션 확인 필요"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r5900": "128 GB",
+            "A10 Thunder 5840": "64 GB",
+            "NetScaler 16000Z": "128/256 GB",
+            "파이오링크 PAS-K11000": "128 GB(옵션 256GB)",
+            "알테온 D-8600S": "128 GB"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r5900": "6 F5OS + 26 Tenancy",
+            "A10 Thunder 5840": "18-Core Xeon",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K11000": "정보 없음",
+            "알테온 D-8600S": "24-Core Intel"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R10000",
+      "f5_model": "F5 r10600",
+      "competitors": [
+        "A10 Thunder 6440",
+        "NetScaler 16000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-8600SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r10600": "190G / 125G",
+            "A10 Thunder 6440": "150G / 140G",
+            "NetScaler 16000Z": "30~250G",
+            "파이오링크 PAS-K12000": "200G / 120G",
+            "알테온 D-8600SL": "200G / 150G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r10600": "1.9M",
+            "A10 Thunder 6440": "4M",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-8600SL": "3.6M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r10600": "4.5M",
+            "A10 Thunder 6440": "1.4M",
+            "NetScaler 16000Z": "최대 7.5M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "5.8M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r10600": "115K",
+            "A10 Thunder 6440": "N/A(S/W 처리)",
+            "NetScaler 16000Z": "최대 280K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "150K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r10600": "145M",
+            "A10 Thunder 6440": "256M",
+            "NetScaler 16000Z": "53M / 104M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-8600SL": "정보 없음"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r10600": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 6440": "4x 40G QSFP+, 48x 10G SFP+",
+            "NetScaler 16000Z": "4x 100G QSFP28, 8x 25G SFP28",
+            "파이오링크 PAS-K12000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-8600SL": "100G/25G 옵션 확인 필요"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r10600": "256 GB",
+            "A10 Thunder 6440": "128 GB",
+            "NetScaler 16000Z": "128/256 GB",
+            "파이오링크 PAS-K12000": "256 GB(옵션 512GB)",
+            "알테온 D-8600SL": "128 GB"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r10600": "12 F5OS + 24 Tenancy",
+            "A10 Thunder 6440": "2x10-Core Xeon",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "24-Core Intel"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R10000",
+      "f5_model": "F5 r10800",
+      "competitors": [
+        "A10 Thunder 7440",
+        "NetScaler 16000Z / 17000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-8600SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r10800": "190G / 145G",
+            "A10 Thunder 7440": "220G / 200G",
+            "NetScaler 16000Z / 17000Z": "30~250G / 30~350G",
+            "파이오링크 PAS-K12000": "200G / 120G",
+            "알테온 D-8600SL": "200G / 150G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r10800": "2.1M",
+            "A10 Thunder 7440": "7.5M",
+            "NetScaler 16000Z / 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-8600SL": "3.6M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r10800": "5.5M",
+            "A10 Thunder 7440": "2.4M",
+            "NetScaler 16000Z / 17000Z": "최대 7.5M / 11.55M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "5.8M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r10800": "150K",
+            "A10 Thunder 7440": "N/A(S/W 처리)",
+            "NetScaler 16000Z / 17000Z": "최대 280K / 219K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "150K"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r10800": "160M",
+            "A10 Thunder 7440": "256M",
+            "NetScaler 16000Z / 17000Z": "53M/104M 또는 117M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-8600SL": "정보 없음"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r10800": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 7440": "4x 40G QSFP+, 48x 10G SFP+",
+            "NetScaler 16000Z / 17000Z": "16000Z: 4x100G+8x25G / 17000Z: 8x50G+4x200G",
+            "파이오링크 PAS-K12000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-8600SL": "100G/25G 옵션 확인 필요"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r10800": "256 GB",
+            "A10 Thunder 7440": "128 GB",
+            "NetScaler 16000Z / 17000Z": "128/256 GB 또는 256 GB",
+            "파이오링크 PAS-K12000": "256 GB(옵션 512GB)",
+            "알테온 D-8600SL": "128 GB"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r10800": "12 F5OS + 28 Tenancy",
+            "A10 Thunder 7440": "2x18-Core Xeon",
+            "NetScaler 16000Z / 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-8600SL": "24-Core Intel"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R10000",
+      "f5_model": "F5 r10900",
+      "competitors": [
+        "A10 Thunder 7440",
+        "NetScaler 17000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-9800S / D-9800SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r10900": "190G / 190G",
+            "A10 Thunder 7440": "220G / 200G",
+            "NetScaler 17000Z": "30~350G",
+            "파이오링크 PAS-K12000": "200G / 120G",
+            "알테온 D-9800S / D-9800SL": "320G / 210G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r10900": "2.5M",
+            "A10 Thunder 7440": "7.5M",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-9800S / D-9800SL": "4.7M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r10900": "6.6M",
+            "A10 Thunder 7440": "2.4M",
+            "NetScaler 17000Z": "최대 11.55M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S / D-9800SL": "8M"
+          }
+        },
+        {
+          "metric": "SSL TPS (RSA 2K)",
+          "values": {
+            "F5 r10900": "200K",
+            "A10 Thunder 7440": "N/A(S/W 처리)",
+            "NetScaler 17000Z": "최대 219K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S / D-9800SL": "100K / 200K 조건별"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r10900": "180M",
+            "A10 Thunder 7440": "256M",
+            "NetScaler 17000Z": "117M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-9800S / D-9800SL": "280M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r10900": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 7440": "4x 40G QSFP+, 48x 10G SFP+",
+            "NetScaler 17000Z": "8x50G SFP56, 4x200G QSFP56",
+            "파이오링크 PAS-K12000": "6x 100G/40G QSFP+, 16x 25G/10G SFP+",
+            "알테온 D-9800S / D-9800SL": "2x100/40G, 최대 16x25G/20x10G 옵션"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r10900": "256 GB",
+            "A10 Thunder 7440": "128 GB",
+            "NetScaler 17000Z": "256 GB",
+            "파이오링크 PAS-K12000": "256 GB(옵션 512GB)",
+            "알테온 D-9800S / D-9800SL": "공개자료 기준 확인 필요"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r10900": "12 F5OS + 36 Tenancy",
+            "A10 Thunder 7440": "2x18-Core Xeon",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S / D-9800SL": "정보 없음"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R12000",
+      "f5_model": "F5 r12600-DS",
+      "competitors": [
+        "A10 Thunder 6655S",
+        "NetScaler 16000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-9800S"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r12600-DS": "195G / 146G",
+            "A10 Thunder 6655S": "185G / 170G",
+            "NetScaler 16000Z": "30~250G",
+            "파이오링크 PAS-K12000": "200G / 160G*",
+            "알테온 D-9800S": "320G / 210G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r12600-DS": "2.8M",
+            "A10 Thunder 6655S": "6M",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-9800S": "4.7M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r12600-DS": "7M",
+            "A10 Thunder 6655S": "2.25M",
+            "NetScaler 16000Z": "최대 7.5M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S": "8M"
+          }
+        },
+        {
+          "metric": "SSL TPS RSA 2K",
+          "values": {
+            "F5 r12600-DS": "270K",
+            "A10 Thunder 6655S": "100K",
+            "NetScaler 16000Z": "최대 280K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S": "100K"
+          }
+        },
+        {
+          "metric": "SSL Bulk",
+          "values": {
+            "F5 r12600-DS": "95G",
+            "A10 Thunder 6655S": "72.5G",
+            "NetScaler 16000Z": "최대 130G",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S": "50G"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r12600-DS": "399M",
+            "A10 Thunder 6655S": "384M",
+            "NetScaler 16000Z": "53M / 104M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-9800S": "280M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r12600-DS": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 6655S": "16x 100G/40G",
+            "NetScaler 16000Z": "4x 100G QSFP28, 8x 25G SFP28",
+            "파이오링크 PAS-K12000": "6x 100G QSFP+, 16x 25G SFP+",
+            "알테온 D-9800S": "8x 100G/40G/25G/10G QSFP28"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r12600-DS": "512 GB",
+            "A10 Thunder 6655S": "192 GB",
+            "NetScaler 16000Z": "128/256 GB",
+            "파이오링크 PAS-K12000": "256 GB 또는 옵션 512 GB",
+            "알테온 D-9800S": "192 GB급"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r12600-DS": "12 F5OS + 44 Tenancy",
+            "A10 Thunder 6655S": "28-Core Xeon",
+            "NetScaler 16000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800S": "정보 없음"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R12000",
+      "f5_model": "F5 r12800-DS",
+      "competitors": [
+        "A10 Thunder 7440",
+        "NetScaler 17000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-9800SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r12800-DS": "195G / 195G",
+            "A10 Thunder 7440": "220G / 200G",
+            "NetScaler 17000Z": "30~350G",
+            "파이오링크 PAS-K12000": "200G / 160G*",
+            "알테온 D-9800SL": "320G / 210G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r12800-DS": "3.1M",
+            "A10 Thunder 7440": "7.5M",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-9800SL": "4.7M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r12800-DS": "8.5M",
+            "A10 Thunder 7440": "2.4M",
+            "NetScaler 17000Z": "최대 11.55M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "8M"
+          }
+        },
+        {
+          "metric": "SSL TPS RSA 2K",
+          "values": {
+            "F5 r12800-DS": "335K",
+            "A10 Thunder 7440": "N/A",
+            "NetScaler 17000Z": "최대 219K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "200K"
+          }
+        },
+        {
+          "metric": "SSL Bulk",
+          "values": {
+            "F5 r12800-DS": "100G",
+            "A10 Thunder 7440": "N/A",
+            "NetScaler 17000Z": "최대 190G",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "100G"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r12800-DS": "399M",
+            "A10 Thunder 7440": "256M",
+            "NetScaler 17000Z": "117M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-9800SL": "280M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r12800-DS": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 7440": "4x 40G QSFP+, 48x 10G SFP+",
+            "NetScaler 17000Z": "8x 50G SFP56, 4x 200G QSFP56",
+            "파이오링크 PAS-K12000": "6x 100G QSFP+, 16x 25G SFP+",
+            "알테온 D-9800SL": "8x 100G/40G/25G/10G QSFP28"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r12800-DS": "512 GB",
+            "A10 Thunder 7440": "128 GB",
+            "NetScaler 17000Z": "256 GB",
+            "파이오링크 PAS-K12000": "256 GB 또는 옵션 512 GB",
+            "알테온 D-9800SL": "192 GB급"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r12800-DS": "12 F5OS + 52 Tenancy",
+            "A10 Thunder 7440": "2x18-Core Xeon",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "정보 없음"
+          }
+        }
+      ]
+    },
+    {
+      "series": "R12000",
+      "f5_model": "F5 r12900-DS",
+      "competitors": [
+        "A10 Thunder 7655S",
+        "NetScaler 17000Z",
+        "파이오링크 PAS-K12000",
+        "알테온 D-9800SL"
+      ],
+      "rows": [
+        {
+          "metric": "L4/L7 Throughput",
+          "values": {
+            "F5 r12900-DS": "195G / 195G",
+            "A10 Thunder 7655S": "370G / 340G",
+            "NetScaler 17000Z": "30~350G",
+            "파이오링크 PAS-K12000": "200G / 160G*",
+            "알테온 D-9800SL": "320G / 210G"
+          }
+        },
+        {
+          "metric": "L4 CPS",
+          "values": {
+            "F5 r12900-DS": "3.5M",
+            "A10 Thunder 7655S": "12M",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "5M",
+            "알테온 D-9800SL": "4.7M"
+          }
+        },
+        {
+          "metric": "L7 RPS (HTTP)",
+          "values": {
+            "F5 r12900-DS": "10.5M",
+            "A10 Thunder 7655S": "4.5M",
+            "NetScaler 17000Z": "최대 11.55M",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "8M"
+          }
+        },
+        {
+          "metric": "SSL TPS RSA 2K",
+          "values": {
+            "F5 r12900-DS": "400K",
+            "A10 Thunder 7655S": "200K",
+            "NetScaler 17000Z": "최대 219K",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "200K"
+          }
+        },
+        {
+          "metric": "SSL Bulk",
+          "values": {
+            "F5 r12900-DS": "110G",
+            "A10 Thunder 7655S": "145G",
+            "NetScaler 17000Z": "최대 190G",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "100G"
+          }
+        },
+        {
+          "metric": "동시 커넥션",
+          "values": {
+            "F5 r12900-DS": "399M",
+            "A10 Thunder 7655S": "768M",
+            "NetScaler 17000Z": "117M",
+            "파이오링크 PAS-K12000": "100M",
+            "알테온 D-9800SL": "280M"
+          }
+        },
+        {
+          "metric": "인터페이스",
+          "values": {
+            "F5 r12900-DS": "4x 100G/40G QSFP28, 16x 25G/10G SFP28",
+            "A10 Thunder 7655S": "16x 100G/40G",
+            "NetScaler 17000Z": "8x 50G SFP56, 4x 200G QSFP56",
+            "파이오링크 PAS-K12000": "6x 100G QSFP+, 16x 25G SFP+",
+            "알테온 D-9800SL": "8x 100G/40G/25G/10G QSFP28"
+          }
+        },
+        {
+          "metric": "Memory",
+          "values": {
+            "F5 r12900-DS": "512 GB",
+            "A10 Thunder 7655S": "384 GB",
+            "NetScaler 17000Z": "256 GB",
+            "파이오링크 PAS-K12000": "256 GB 또는 옵션 512 GB",
+            "알테온 D-9800SL": "192 GB급"
+          }
+        },
+        {
+          "metric": "CPU / Tenancy",
+          "values": {
+            "F5 r12900-DS": "12 F5OS + 60 Tenancy",
+            "A10 Thunder 7655S": "2x28-Core Xeon",
+            "NetScaler 17000Z": "정보 없음",
+            "파이오링크 PAS-K12000": "정보 없음",
+            "알테온 D-9800SL": "정보 없음"
+          }
+        }
+      ]
+    }
+  ]
+}

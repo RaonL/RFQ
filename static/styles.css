@@ -1,0 +1,299 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+  --ink: #17202a;
+  --muted: #647184;
+  --line: #d8dee8;
+  --surface: #ffffff;
+  --page: #f4f6f8;
+  --brand: #b7192b;
+  --brand-dark: #7f1420;
+  --good: #0b7a53;
+  --warn: #a45f00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 34px 42px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  max-width: 860px;
+  margin-top: 6px;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+h2 {
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+h3 {
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.eyebrow {
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.status {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status span,
+.badge {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #f9fafb;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 480px) minmax(360px, 1fr);
+  gap: 20px;
+  padding: 22px 42px;
+}
+
+.panel,
+.results {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.upload-panel {
+  align-self: start;
+}
+
+.grid.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input[type="file"],
+input[type="number"] {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+}
+
+button,
+.link {
+  min-height: 42px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 10px 15px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.primary {
+  width: 100%;
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.secondary,
+.link {
+  background: #ffffff;
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.notice {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #8a3d00;
+}
+
+.model-list {
+  display: grid;
+  margin: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.model-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(100px, 1fr);
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.model-row strong {
+  color: var(--ink);
+}
+
+.results {
+  margin: 0 42px 28px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+th,
+td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+th {
+  background: #f7f9fb;
+  color: #314052;
+  font-weight: 800;
+}
+
+tfoot td {
+  background: #fff5f5;
+  color: var(--brand-dark);
+  font-weight: 900;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge.ok {
+  border-color: #b7e4d2;
+  background: #ecfdf5;
+  color: var(--good);
+}
+
+.badge.warn {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: var(--warn);
+}
+
+.comparison-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.comparison {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.comparison h3 {
+  margin-bottom: 12px;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+@media (max-width: 860px) {
+  .topbar,
+  .section-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar,
+  .layout,
+  .results {
+    margin: 0;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .results {
+    margin-bottom: 20px;
+  }
+
+  .model-row,
+  .grid.two {
+    grid-template-columns: 1fr;
+  }
+}

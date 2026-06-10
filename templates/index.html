@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>F5 RFQ 맞춤견적</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">F5 rSeries RFQ</p>
+        <h1>견적 요청 파일을 올리면 rSeries 기준 견적을 자동 생성합니다.</h1>
+      </div>
+      <div class="status">
+        <span>기준 모델 {{ models|length }}개</span>
+        <span>가격표 {{ pricebook_count }}건</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel upload-panel">
+        <form method="post" enctype="multipart/form-data">
+          <label class="field">
+            <span>RFQ / 견적 요청 파일</span>
+            <input type="file" name="rfq_file" accept=".xlsx,.xlsm,.csv,.txt,.pdf" required>
+          </label>
+
+          <div class="grid two">
+            <label class="field">
+              <span>마진율</span>
+              <input type="number" name="margin_rate" value="{{ margin_rate|default(default_margin) }}" min="0" max="100" step="1">
+            </label>
+            <label class="field">
+              <span>할인율</span>
+              <input type="number" name="discount_rate" value="{{ discount_rate|default(default_discount) }}" min="0" max="100" step="1">
+            </label>
+          </div>
+
+          <button class="primary" type="submit">견적 생성</button>
+        </form>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="notice">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+      </section>
+
+      <section class="panel">
+        <h2>기준 자료</h2>
+        <div class="model-list">
+          {% for item in models %}
+            <div class="model-row">
+              <strong>{{ item.model }}</strong>
+              <span>{{ item.specs.get("L4/L7 Throughput", "-") }}</span>
+              <span>{{ item.specs.get("SSL TPS (RSA 2K)", item.specs.get("SSL TPS RSA 2K", "-")) }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <a class="link" href="{{ url_for('pricebook_template') }}">가격표 템플릿 다운로드</a>
+      </section>
+    </main>
+
+    {% if quote_rows %}
+      <section class="results">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Generated {{ generated_at }}</p>
+            <h2>맞춤 견적 결과</h2>
+          </div>
+          <form method="post" action="{{ url_for('download_csv') }}">
+            <input type="hidden" name="rows" value='{{ quote_rows|tojson }}'>
+            <button class="secondary" type="submit">CSV 다운로드</button>
+          </form>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>모델</th>
+                <th>SKU</th>
+                <th>설명</th>
+                <th>수량</th>
+                <th>단가</th>
+                <th>합계</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in quote_rows %}
+                <tr>
+                  <td>{{ row.model }}</td>
+                  <td>{{ row.sku }}</td>
+                  <td>{{ row.description }}</td>
+                  <td>{{ row.quantity }}</td>
+                  <td>{{ row.currency }} {{ "{:,.0f}".format(row.sell_unit) }}</td>
+                  <td>{{ row.currency }} {{ "{:,.0f}".format(row.line_total) }}</td>
+                  <td>
+                    {% if row.priced %}
+                      <span class="badge ok">가격 적용</span>
+                    {% else %}
+                      <span class="badge warn">가격 필요</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="5">총 견적가</td>
+                <td colspan="2">{{ quote_rows[0].currency }} {{ "{:,.0f}".format(total) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="comparison-grid">
+          {% for row in quote_rows %}
+            {% set comparison = comparisons.get(row.model) %}
+            {% if comparison %}
+              <article class="comparison">
+                <h3>{{ row.model }} 경쟁사 비교</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>항목</th>
+                      <th>{{ row.model }}</th>
+                      {% for competitor in comparison.competitors %}
+                        <th>{{ competitor }}</th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in comparison.rows[:8] %}
+                      <tr>
+                        <td>{{ item.metric }}</td>
+                        <td>{{ item["values"].get(row.model, "-") }}</td>
+                        {% for competitor in comparison.competitors %}
+                          <td>{{ item["values"].get(competitor, "-") }}</td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </article>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if rfq_text %}
+      <section class="results">
+        <h2>추출 텍스트 미리보기</h2>
+        <pre>{{ rfq_text }}</pre>
+      </section>
+    {% endif %}
+  </body>
+</html>

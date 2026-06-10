@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: f5-rfq
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEFAULT_MARGIN_RATE
+        value: "0.18"
+      - key: DEFAULT_DISCOUNT_RATE
+        value: "0.00"
