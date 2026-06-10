@@ -157,6 +157,13 @@ button,
   text-decoration: none;
 }
 
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
 .primary {
   width: 100%;
   background: var(--brand);
@@ -168,6 +175,13 @@ button,
   background: #ffffff;
   border-color: var(--brand);
   color: var(--brand-dark);
+}
+
+.reset-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
 }
 
 .notice {
@@ -498,7 +512,8 @@ pre {
   .grid.two,
   .summary-grid,
   .near-grid,
-  .mail-grid {
+  .mail-grid,
+  .form-actions {
     grid-template-columns: 1fr;
   }
 

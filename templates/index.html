@@ -20,10 +20,10 @@
 
     <main class="layout">
       <section class="panel input-panel">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" autocomplete="off">
           <label class="field">
             <span>고객 요구 스펙</span>
-            <textarea name="requirement_text" rows="12" placeholder="{{ example_text }}">{{ requirement_text|default("") }}</textarea>
+            <textarea name="requirement_text" rows="12" placeholder="{{ example_text }}" autocomplete="off" spellcheck="false">{{ requirement_text|default("") }}</textarea>
           </label>
 
           <label class="field">
@@ -31,7 +31,10 @@
             <input type="file" name="requirement_file" accept=".xlsx,.xlsm,.csv,.txt,.pdf">
           </label>
 
-          <button class="primary" type="submit">장비 추천</button>
+          <div class="form-actions">
+            <button class="primary" type="submit">장비 추천</button>
+            <a class="secondary reset-link" href="{{ url_for('index') }}">새로고침</a>
+          </div>
         </form>
 
         {% with messages = get_flashed_messages() %}

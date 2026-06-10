@@ -46,6 +46,14 @@ QUALITATIVE_FEATURES = {
 }
 
 
+@app.after_request
+def add_no_store_headers(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 def clean_text(value):
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
