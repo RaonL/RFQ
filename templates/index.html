@@ -138,6 +138,7 @@
               <tr>
                 <th>모델</th>
                 <th>L4/L7</th>
+                <th>L4 CPS</th>
                 <th>SSL TPS</th>
                 <th>동시 커넥션</th>
                 <th>충족</th>
@@ -149,11 +150,30 @@
                 <tr>
                   <td>{{ item.model.display_model }}</td>
                   <td>{{ item.model.l4_gbps|int }}G / {{ item.model.l7_gbps|int }}G</td>
+                  <td>{{ "{:,.0f}".format(item.model.l4_cps) }}</td>
                   <td>{{ "{:,.0f}".format(item.model.ssl_tps) }}</td>
                   <td>{{ "{:,.0f}".format(item.model.concurrent_connections) }}</td>
                   <td>{{ item.passed_count }}</td>
                   <td>{{ item.failed_count }}</td>
                 </tr>
+                {% if item.competitors %}
+                  <tr class="competitor-row">
+                    <td colspan="7">
+                      <div class="competitor-title">대응 경쟁사 제품 비교</div>
+                      <div class="competitor-grid">
+                        {% for competitor in item.competitors %}
+                          <div class="competitor-card {% if loop.first %}f5-card{% endif %}">
+                            <strong>{{ competitor.product }}</strong>
+                            <span>L4/L7 {{ competitor.l4_l7 }}</span>
+                            <span>L4 CPS {{ competitor.l4_cps }}</span>
+                            <span>SSL {{ competitor.ssl_tps }}</span>
+                            <span>동시 {{ competitor.connections }}</span>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endif %}
               {% endfor %}
             </tbody>
           </table>

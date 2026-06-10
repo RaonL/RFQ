@@ -360,9 +360,48 @@ def evaluate_model(model, requirements):
     }
 
 
+def comparison_for_model(model_name, reference):
+    for comparison in reference.get("comparisons", []):
+        if comparison.get("f5_model") == model_name:
+            return comparison
+    return None
+
+
+def metric_value(comparison, metric_name, product_name):
+    if not comparison:
+        return "-"
+    for row in comparison.get("rows", []):
+        if row.get("metric") == metric_name:
+            return row.get("values", {}).get(product_name, "-") or "-"
+    return "-"
+
+
+def competitor_summary(model_name, reference):
+    comparison = comparison_for_model(model_name, reference)
+    if not comparison:
+        return []
+
+    products = [comparison.get("f5_model", "")] + comparison.get("competitors", [])
+    return [
+        {
+            "product": product,
+            "l4_l7": metric_value(comparison, "L4/L7 Throughput", product),
+            "l4_cps": metric_value(comparison, "L4 CPS", product),
+            "ssl_tps": metric_value(comparison, "SSL TPS (RSA 2K)", product)
+            if metric_value(comparison, "SSL TPS (RSA 2K)", product) != "-"
+            else metric_value(comparison, "SSL TPS RSA 2K", product),
+            "connections": metric_value(comparison, "동시 커넥션", product),
+        }
+        for product in products
+        if product
+    ]
+
+
 def recommend_model(requirements, reference):
     models = [normalize_model(model) for model in reference.get("f5_models", [])]
     evaluations = [evaluate_model(model, requirements) for model in models]
+    for evaluation in evaluations:
+        evaluation["competitors"] = competitor_summary(evaluation["model"]["model"], reference)
     evaluations.sort(
         key=lambda item: (
             0 if item["all_passed"] else 1,

@@ -266,6 +266,46 @@ tfoot td {
   margin-top: 22px;
 }
 
+.competitor-row td {
+  background: #fbfcfe;
+  padding: 16px 14px 18px;
+}
+
+.competitor-title {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.competitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.competitor-card {
+  display: grid;
+  gap: 6px;
+  min-height: 132px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.competitor-card strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.competitor-card.f5-card {
+  border-color: #f1a8b2;
+  background: #fff7f8;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
