@@ -5,9 +5,9 @@
   --muted: #647184;
   --line: #d8dee8;
   --surface: #ffffff;
-  --page: #f4f6f8;
-  --brand: #b7192b;
-  --brand-dark: #7f1420;
+  --page: #eef5ff;
+  --brand: #2563eb;
+  --brand-dark: #1d4ed8;
   --good: #0b7a53;
   --warn: #a45f00;
 }
@@ -28,8 +28,8 @@ body {
   justify-content: space-between;
   gap: 24px;
   padding: 34px 42px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--line);
+  background: #eaf2ff;
+  border-bottom: 1px solid #bfdbfe;
 }
 
 h1,
@@ -99,7 +99,7 @@ h3 {
 .panel,
 .results {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid #c7d7ee;
   border-radius: 8px;
   padding: 22px;
 }
@@ -174,9 +174,9 @@ button,
   margin-top: 14px;
   padding: 12px;
   border-radius: 6px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #8a3d00;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
 }
 
 .model-list {
@@ -209,13 +209,13 @@ button,
 }
 
 .hero-result.result-ok {
-  border-color: #86d9b5;
-  background: #f0fdf7;
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .hero-result.result-fail {
   border-color: #fca5a5;
-  background: #fff7f7;
+  background: #fef2f2;
 }
 
 .score-card {
@@ -224,13 +224,13 @@ button,
   min-width: 120px;
   margin-top: 12px;
   padding: 14px 16px;
-  border: 1px solid #b7e4d2;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #ffffff;
 }
 
 .score-card strong {
-  color: var(--good);
+  color: var(--brand-dark);
   font-size: 28px;
   line-height: 1;
 }

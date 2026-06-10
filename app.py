@@ -97,13 +97,14 @@ def number_with_unit(value):
     if value is None:
         return 0.0
     text = str(value).replace(",", "").strip().lower()
-    found = re.search(r"(\d+(?:\.\d+)?)", text)
+    found = re.search(r"(\d+(?:\.\d+)?)\s*(gb|g|k|m)?\b", text)
     if not found:
         return 0.0
     number = float(found.group(1))
-    if "k" in text:
+    unit = found.group(2) or ""
+    if unit == "k":
         return number * 1_000
-    if "m" in text:
+    if unit == "m":
         return number * 1_000_000
     return number
 
