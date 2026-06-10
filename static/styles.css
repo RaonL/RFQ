@@ -118,15 +118,26 @@ h3 {
 }
 
 input[type="file"],
-input[type="number"] {
+input[type="number"],
+textarea {
   width: 100%;
-  min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px 12px;
   background: #ffffff;
   color: var(--ink);
   font: inherit;
+}
+
+input[type="file"],
+input[type="number"] {
+  min-height: 42px;
+}
+
+textarea {
+  min-height: 260px;
+  line-height: 1.55;
+  resize: vertical;
 }
 
 button,
@@ -170,7 +181,7 @@ button,
 
 .model-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(100px, 1fr);
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr);
   gap: 12px;
   padding: 11px 0;
   border-bottom: 1px solid var(--line);
@@ -249,6 +260,32 @@ tfoot td {
   margin-top: 22px;
 }
 
+.summary-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.reason-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.reason-list li {
+  line-height: 1.45;
+}
+
+.mail {
+  min-height: 132px;
+  margin-top: 12px;
+  background: #f7f9fb;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
 .comparison {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -293,7 +330,8 @@ pre {
   }
 
   .model-row,
-  .grid.two {
+  .grid.two,
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 }

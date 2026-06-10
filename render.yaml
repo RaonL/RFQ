@@ -8,7 +8,3 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
-      - key: DEFAULT_MARGIN_RATE
-        value: "0.18"
-      - key: DEFAULT_DISCOUNT_RATE
-        value: "0.00"

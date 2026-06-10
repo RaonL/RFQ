@@ -1,13 +1,10 @@
-import csv
-import io
 import json
 import os
 import re
-from datetime import datetime
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from flask import Flask, Response, flash, render_template, request, send_file
+from flask import Flask, flash, render_template, request
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
@@ -15,17 +12,23 @@ from pypdf import PdfReader
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 REFERENCE_PATH = DATA_DIR / "reference_data.json"
-PRICEBOOK_PATH = DATA_DIR / "pricebook.csv"
-
-DEFAULT_MARGIN_RATE = float(os.getenv("DEFAULT_MARGIN_RATE", "0.18"))
-DEFAULT_DISCOUNT_RATE = float(os.getenv("DEFAULT_DISCOUNT_RATE", "0.00"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-on-render")
 
 
-def money(value):
-    return f"{round(value):,}"
+QUALITATIVE_FEATURES = {
+    "redundant_power": {
+        "label": "전원 이중화",
+        "keywords": ["전원", "power", "psu", "이중화", "redundant"],
+        "supported": True,
+    },
+    "redundant_fan": {
+        "label": "FAN 이중화/Hot-Swap",
+        "keywords": ["fan", "팬", "hot-swap", "hotswap", "hot swap", "이중화"],
+        "supported": True,
+    },
+}
 
 
 def clean_text(value):
@@ -36,31 +39,6 @@ def load_reference():
     if not REFERENCE_PATH.exists():
         return {"f5_models": [], "comparisons": [], "sources": [], "pdf_summary": {}}
     return json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
-
-
-def load_pricebook():
-    prices = {}
-    if not PRICEBOOK_PATH.exists():
-        return prices
-
-    with PRICEBOOK_PATH.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            model = clean_text(row.get("model") or row.get("sku")).lower()
-            if not model:
-                continue
-            try:
-                list_price = float(str(row.get("list_price", "0")).replace(",", ""))
-            except ValueError:
-                list_price = 0
-            prices[model] = {
-                "sku": clean_text(row.get("sku")),
-                "model": clean_text(row.get("model")),
-                "description": clean_text(row.get("description")),
-                "list_price": list_price,
-                "currency": clean_text(row.get("currency")) or "KRW",
-            }
-    return prices
 
 
 def text_from_upload(uploaded_file):
@@ -91,7 +69,8 @@ def text_from_upload(uploaded_file):
                         chunks.append(" | ".join(values))
             return "\n".join(chunks)
 
-        return uploaded_file.read().decode("utf-8-sig", errors="ignore")
+        raw = uploaded_file.read()
+        return raw.decode("utf-8-sig", errors="ignore")
     finally:
         try:
             temp_path.unlink()
@@ -99,165 +78,310 @@ def text_from_upload(uploaded_file):
             pass
 
 
-def find_requested_models(text, reference):
-    text_lower = text.lower()
-    matches = {}
+def number_with_unit(value):
+    if value is None:
+        return 0.0
+    text = str(value).replace(",", "").strip().lower()
+    found = re.search(r"(\d+(?:\.\d+)?)", text)
+    if not found:
+        return 0.0
+    number = float(found.group(1))
+    if "k" in text:
+        return number * 1_000
+    if "m" in text:
+        return number * 1_000_000
+    if "g" in text:
+        return number
+    return number
 
-    for item in reference.get("f5_models", []):
-        model = item["model"]
-        tokens = {model.lower(), model.lower().replace("f5 ", "")}
-        tokens.update(re.findall(r"r\d{4,5}(?:-ds)?", model.lower()))
-        if any(token and token in text_lower for token in tokens):
-            matches[model] = {
-                "model": model,
-                "quantity": estimate_quantity(text_lower, tokens),
-                "series": item.get("series", ""),
-                "specs": item.get("specs", {}),
-            }
 
-    generic_hits = re.findall(r"\br\d{4,5}(?:-ds)?\b", text_lower)
-    known = {item["model"].lower(): item for item in reference.get("f5_models", [])}
-    for hit in generic_hits:
-        if not any(hit in key for key in known):
+def parse_throughput_pair(value):
+    text = str(value or "")
+    numbers = [float(item) for item in re.findall(r"(\d+(?:\.\d+)?)\s*G", text, re.IGNORECASE)]
+    if len(numbers) >= 2:
+        return numbers[0], numbers[1]
+    if len(numbers) == 1:
+        return numbers[0], numbers[0]
+    return 0.0, 0.0
+
+
+def parse_ports(interface_text):
+    text = str(interface_text or "").lower()
+    ports = {
+        "sfp": 0,
+        "copper": 0,
+        "speed_1g": 0,
+        "speed_10g": 0,
+        "speed_25g": 0,
+    }
+
+    for count, desc in re.findall(r"(\d+)\s*x\s*([^,]+)", text):
+        qty = int(count)
+        if "sfp" in desc:
+            ports["sfp"] += qty
+        if "copper" in desc or "utp" in desc or "rj45" in desc:
+            ports["copper"] += qty
+        if "1g" in desc:
+            ports["speed_1g"] += qty
+        if "10g" in desc:
+            ports["speed_10g"] += qty
+        if "25g" in desc:
+            ports["speed_25g"] += qty
+
+    return ports
+
+
+def normalize_model(model):
+    specs = model.get("specs", {})
+    l4, l7 = parse_throughput_pair(specs.get("L4/L7 Throughput"))
+    ports = parse_ports(specs.get("인터페이스"))
+    model_name = model.get("model", "")
+
+    return {
+        "model": model_name,
+        "display_model": display_model_name(model_name),
+        "series": model.get("series", ""),
+        "raw_specs": specs,
+        "l4_gbps": l4,
+        "l7_gbps": l7,
+        "ssl_tps": number_with_unit(
+            specs.get("SSL TPS (RSA 2K)") or specs.get("SSL TPS RSA 2K")
+        ),
+        "concurrent_connections": number_with_unit(specs.get("동시 커넥션")),
+        "ssd_gb": number_with_unit(specs.get("Storage")),
+        "memory_gb": number_with_unit(specs.get("Memory")),
+        **ports,
+        "redundant_power": True,
+        "redundant_fan": True,
+    }
+
+
+def display_model_name(model_name):
+    name = str(model_name or "").replace("F5 ", "F5 BIG-IP ")
+    return re.sub(r"\br(\d)", r"R\1", name)
+
+
+def extract_threshold(text, keywords, unit_hint=None):
+    lowered = text.lower()
+    for keyword in keywords:
+        key = keyword.lower()
+        idx = lowered.find(key)
+        if idx < 0:
             continue
-        for key, item in known.items():
-            if hit in key and item["model"] not in matches:
-                matches[item["model"]] = {
-                    "model": item["model"],
-                    "quantity": estimate_quantity(text_lower, {hit}),
-                    "series": item.get("series", ""),
-                    "specs": item.get("specs", {}),
-                }
-
-    return list(matches.values())
-
-
-def estimate_quantity(text, tokens):
-    for token in tokens:
-        if not token:
+        window = lowered[idx + len(key) : idx + len(key) + 90]
+        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(gbps|gb|g|tps|k|m)?", window)
+        if not found:
             continue
+        raw = found.group(1).replace(",", "")
+        number = float(raw)
+        unit = (found.group(2) or unit_hint or "").lower()
+        if unit == "k":
+            return number * 1_000
+        if unit == "m":
+            return number * 1_000_000
+        return number
+    return None
+
+
+def extract_port_requirement(text, keywords):
+    lowered = text.lower()
+    for keyword in keywords:
+        idx = lowered.find(keyword.lower())
+        if idx < 0:
+            continue
+        window = lowered[max(0, idx - 40) : idx + 80]
         patterns = [
-            rf"{re.escape(token)}\D{{0,12}}(\d{{1,3}})\s*(?:ea|대|개|식)",
-            rf"(\d{{1,3}})\s*(?:ea|대|개|식)\D{{0,12}}{re.escape(token)}",
+            r"(\d+)\s*(?:port|ports|포트|port 이상)",
+            r"(\d+)\s*(?:개|ea)\s*(?:이상)?",
         ]
         for pattern in patterns:
-            found = re.search(pattern, text, re.IGNORECASE)
+            found = re.search(pattern, window, re.IGNORECASE)
             if found:
-                return max(int(found.group(1)), 1)
-    return 1
+                return int(found.group(1))
+    return None
 
 
-def build_quote(matches, pricebook, margin_rate, discount_rate):
-    rows = []
-    total = 0
-    for match in matches:
-        model_key = match["model"].lower()
-        price = pricebook.get(model_key, {})
-        list_price = float(price.get("list_price") or 0)
-        qty = int(match.get("quantity") or 1)
-        sell_unit = list_price * (1 - discount_rate) * (1 + margin_rate)
-        line_total = sell_unit * qty
-        total += line_total
-        rows.append(
+def parse_requirements(text):
+    requirements = []
+
+    numeric_checks = [
+        ("l4_gbps", "L4 Throughput", ["l4 throughput", "l4 처리량", "l4"], "Gbps"),
+        ("l7_gbps", "L7 Throughput", ["l7 throughput", "l7 처리량", "l7"], "Gbps"),
+        ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps", "ssl"], "TPS"),
+        (
+            "concurrent_connections",
+            "Concurrent Connection",
+            ["concurrent connection", "동시 커넥션", "동시접속", "동시 연결", "connection"],
+            "",
+        ),
+        ("ssd_gb", "SSD", ["ssd", "storage", "disk", "스토리지"], "GB"),
+        ("memory_gb", "Memory", ["memory", "메모리", "ram"], "GB"),
+    ]
+
+    for key, label, keywords, unit in numeric_checks:
+        value = extract_threshold(text, keywords, unit)
+        if value is not None:
+            requirements.append({"key": key, "label": label, "value": value, "unit": unit})
+
+    port_checks = [
+        ("sfp", "SFP/SFP+/SFP28 Port", ["sfp28", "sfp+", "sfp"]),
+        ("copper", "UTP/Copper Port", ["utp", "copper", "rj45"]),
+        ("speed_1g", "1G 지원 Port", ["1g"]),
+        ("speed_10g", "10G 지원 Port", ["10g"]),
+        ("speed_25g", "25G 지원 Port", ["25g"]),
+    ]
+
+    for key, label, keywords in port_checks:
+        value = extract_port_requirement(text, keywords)
+        if value is not None:
+            requirements.append({"key": key, "label": label, "value": value, "unit": "Port"})
+
+    lowered = text.lower()
+    for key, feature in QUALITATIVE_FEATURES.items():
+        if all(word in lowered for word in ["전원", "이중화"]) and key == "redundant_power":
+            requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
+            continue
+        if any(word in lowered for word in feature["keywords"]) and (
+            "이중화" in lowered or "hot" in lowered or "redundant" in lowered
+        ):
+            requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
+
+    deduped = []
+    seen = set()
+    for req in requirements:
+        if req["key"] in seen:
+            continue
+        seen.add(req["key"])
+        deduped.append(req)
+    return deduped
+
+
+def format_requirement_value(req):
+    value = req["value"]
+    if value is True:
+        return "필수"
+    if req["key"] == "concurrent_connections":
+        return f"{value / 1_000_000:g}M 이상"
+    if req["key"] == "ssl_tps":
+        return f"{value:,.0f} TPS 이상"
+    return f"{value:g}{req['unit']} 이상"
+
+
+def format_model_value(model, key):
+    value = model.get(key)
+    if key == "concurrent_connections":
+        return f"{value / 1_000_000:g}M"
+    if key == "ssl_tps":
+        return f"{value:,.0f} TPS"
+    if key in {"l4_gbps", "l7_gbps"}:
+        return f"{value:g}Gbps"
+    if key in {"ssd_gb", "memory_gb"}:
+        return f"{value:g}GB"
+    if key in {"sfp", "copper", "speed_1g", "speed_10g", "speed_25g"}:
+        return f"{int(value)}Port"
+    if key in {"redundant_power", "redundant_fan"}:
+        return "지원" if value else "확인 필요"
+    return str(value)
+
+
+def evaluate_model(model, requirements):
+    checks = []
+    for req in requirements:
+        actual = model.get(req["key"])
+        if req["value"] is True:
+            passed = bool(actual)
+        else:
+            passed = actual is not None and float(actual) >= float(req["value"])
+        checks.append(
             {
-                "model": match["model"],
-                "sku": price.get("sku") or match["model"],
-                "description": price.get("description") or "F5 rSeries appliance",
-                "quantity": qty,
-                "currency": price.get("currency") or "KRW",
-                "list_price": list_price,
-                "sell_unit": sell_unit,
-                "line_total": line_total,
-                "series": match.get("series", ""),
-                "specs": match.get("specs", {}),
-                "priced": list_price > 0,
+                "label": req["label"],
+                "required": format_requirement_value(req),
+                "actual": format_model_value(model, req["key"]),
+                "passed": passed,
             }
         )
-    return rows, total
+
+    passed_count = sum(1 for check in checks if check["passed"])
+    return {
+        "model": model,
+        "checks": checks,
+        "passed_count": passed_count,
+        "failed_count": len(checks) - passed_count,
+        "all_passed": passed_count == len(checks) and bool(checks),
+    }
 
 
-def comparison_for_model(model, reference):
-    for comparison in reference.get("comparisons", []):
-        if comparison.get("f5_model") == model:
-            return comparison
-    return None
+def recommend_model(requirements, reference):
+    models = [normalize_model(model) for model in reference.get("f5_models", [])]
+    evaluations = [evaluate_model(model, requirements) for model in models]
+    evaluations.sort(
+        key=lambda item: (
+            0 if item["all_passed"] else 1,
+            item["failed_count"],
+            item["model"].get("l4_gbps", 0),
+            item["model"].get("ssl_tps", 0),
+        )
+    )
+    return evaluations[0] if evaluations else None, evaluations
+
+
+def mail_text(recommendation):
+    model = recommendation["model"]["display_model"]
+    if recommendation["all_passed"]:
+        return (
+            f"문의 주신 스펙 기준으로는 {model} 모델이 적합합니다.\n"
+            "요구하신 주요 성능 및 구성 조건을 충족하므로 해당 장비로 제안 진행하시면 됩니다."
+        )
+    return (
+        f"문의 주신 스펙 기준으로는 {model} 모델이 가장 근접합니다.\n"
+        "일부 항목은 추가 확인이 필요하므로 세부 요구사항 확인 후 제안 진행을 권장드립니다."
+    )
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     reference = load_reference()
-    pricebook = load_pricebook()
     context = {
-        "models": reference.get("f5_models", []),
-        "sources": reference.get("sources", []),
-        "pdf_summary": reference.get("pdf_summary", {}),
-        "default_margin": int(DEFAULT_MARGIN_RATE * 100),
-        "default_discount": int(DEFAULT_DISCOUNT_RATE * 100),
-        "pricebook_count": len(pricebook),
+        "models": [normalize_model(model) for model in reference.get("f5_models", [])],
+        "example_text": (
+            "L4 Throughput 20Gbps 이상\n"
+            "L7 Throughput 13Gbps 이상\n"
+            "Concurrent Connection 19M 이상\n"
+            "SSL TPS 7000 이상\n"
+            "1G/10G/25G SFP+ 4Port 이상\n"
+            "SSD 480GB 이상\n"
+            "전원/FAN 이중화"
+        ),
     }
 
     if request.method == "POST":
-        upload = request.files.get("rfq_file")
-        if not upload or not upload.filename:
-            flash("RFQ 파일을 선택해주세요.")
+        requirement_text = clean_text(request.form.get("requirement_text"))
+        upload = request.files.get("requirement_file")
+        if upload and upload.filename:
+            uploaded_text = text_from_upload(upload)
+            requirement_text = f"{requirement_text}\n{uploaded_text}".strip()
+
+        if not requirement_text:
+            flash("고객 요구 스펙을 입력하거나 파일을 업로드해주세요.")
             return render_template("index.html", **context)
 
-        margin_rate = float(request.form.get("margin_rate", DEFAULT_MARGIN_RATE * 100)) / 100
-        discount_rate = float(request.form.get("discount_rate", DEFAULT_DISCOUNT_RATE * 100)) / 100
-        rfq_text = text_from_upload(upload)
-        matches = find_requested_models(rfq_text, reference)
+        requirements = parse_requirements(requirement_text)
+        if not requirements:
+            flash("비교할 스펙 조건을 찾지 못했습니다. L4, L7, SSL TPS, Concurrent Connection처럼 입력해주세요.")
+            return render_template("index.html", requirement_text=requirement_text, **context)
 
-        if not matches:
-            flash("업로드한 파일에서 rSeries 모델명을 찾지 못했습니다. 예: r2600, r4600, r5600")
-            return render_template("index.html", rfq_text=rfq_text[:1600], **context)
-
-        quote_rows, total = build_quote(matches, pricebook, margin_rate, discount_rate)
-        comparisons = {
-            row["model"]: comparison_for_model(row["model"], reference)
-            for row in quote_rows
-        }
+        recommendation, evaluations = recommend_model(requirements, reference)
         return render_template(
             "index.html",
-            quote_rows=quote_rows,
-            total=total,
-            margin_rate=int(margin_rate * 100),
-            discount_rate=int(discount_rate * 100),
-            comparisons=comparisons,
-            generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            requirement_text=requirement_text,
+            requirements=requirements,
+            recommendation=recommendation,
+            evaluations=evaluations[:6],
+            mail_body=mail_text(recommendation),
             **context,
         )
 
     return render_template("index.html", **context)
-
-
-@app.route("/download.csv", methods=["POST"])
-def download_csv():
-    rows = json.loads(request.form["rows"])
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["model", "sku", "description", "quantity", "currency", "unit_price", "line_total"])
-    for row in rows:
-        writer.writerow(
-            [
-                row["model"],
-                row["sku"],
-                row["description"],
-                row["quantity"],
-                row["currency"],
-                round(float(row["sell_unit"])),
-                round(float(row["line_total"])),
-            ]
-        )
-    return Response(
-        output.getvalue().encode("utf-8-sig"),
-        mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=f5_custom_quote.csv"},
-    )
-
-
-@app.route("/pricebook-template")
-def pricebook_template():
-    return send_file(DATA_DIR / "pricebook_template.csv", as_attachment=True)
 
 
 if __name__ == "__main__":

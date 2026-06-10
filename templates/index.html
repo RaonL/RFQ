@@ -3,41 +3,35 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>F5 RFQ 맞춤견적</title>
+    <title>F5 스펙 매칭 추천</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">F5 rSeries RFQ</p>
-        <h1>견적 요청 파일을 올리면 rSeries 기준 견적을 자동 생성합니다.</h1>
+        <p class="eyebrow">F5 rSeries Spec Matcher</p>
+        <h1>고객 요구 스펙을 입력하면 가장 적합한 F5 장비를 추천합니다.</h1>
       </div>
       <div class="status">
-        <span>기준 모델 {{ models|length }}개</span>
-        <span>가격표 {{ pricebook_count }}건</span>
+        <span>등록 모델 {{ models|length }}개</span>
+        <span>스펙 자동 비교</span>
       </div>
     </header>
 
     <main class="layout">
-      <section class="panel upload-panel">
+      <section class="panel input-panel">
         <form method="post" enctype="multipart/form-data">
           <label class="field">
-            <span>RFQ / 견적 요청 파일</span>
-            <input type="file" name="rfq_file" accept=".xlsx,.xlsm,.csv,.txt,.pdf" required>
+            <span>고객 요구 스펙</span>
+            <textarea name="requirement_text" rows="12" placeholder="{{ example_text }}">{{ requirement_text|default("") }}</textarea>
           </label>
 
-          <div class="grid two">
-            <label class="field">
-              <span>마진율</span>
-              <input type="number" name="margin_rate" value="{{ margin_rate|default(default_margin) }}" min="0" max="100" step="1">
-            </label>
-            <label class="field">
-              <span>할인율</span>
-              <input type="number" name="discount_rate" value="{{ discount_rate|default(default_discount) }}" min="0" max="100" step="1">
-            </label>
-          </div>
+          <label class="field">
+            <span>파일 업로드 선택</span>
+            <input type="file" name="requirement_file" accept=".xlsx,.xlsm,.csv,.txt,.pdf">
+          </label>
 
-          <button class="primary" type="submit">견적 생성</button>
+          <button class="primary" type="submit">장비 추천</button>
         </form>
 
         {% with messages = get_flashed_messages() %}
@@ -48,31 +42,87 @@
       </section>
 
       <section class="panel">
-        <h2>기준 자료</h2>
+        <h2>등록된 F5 모델</h2>
         <div class="model-list">
           {% for item in models %}
             <div class="model-row">
-              <strong>{{ item.model }}</strong>
-              <span>{{ item.specs.get("L4/L7 Throughput", "-") }}</span>
-              <span>{{ item.specs.get("SSL TPS (RSA 2K)", item.specs.get("SSL TPS RSA 2K", "-")) }}</span>
+              <strong>{{ item.display_model }}</strong>
+              <span>L4 {{ item.l4_gbps|int }}G / L7 {{ item.l7_gbps|int }}G</span>
+              <span>SSL {{ "{:,.0f}".format(item.ssl_tps) }} TPS</span>
+              <span>{{ item.sfp }} SFP / {{ item.copper }} Copper</span>
             </div>
           {% endfor %}
         </div>
-        <a class="link" href="{{ url_for('pricebook_template') }}">가격표 템플릿 다운로드</a>
       </section>
     </main>
 
-    {% if quote_rows %}
+    {% if recommendation %}
       <section class="results">
         <div class="section-title">
           <div>
-            <p class="eyebrow">Generated {{ generated_at }}</p>
-            <h2>맞춤 견적 결과</h2>
+            <p class="eyebrow">Recommendation</p>
+            <h2>추천 장비: {{ recommendation.model.display_model }}</h2>
           </div>
-          <form method="post" action="{{ url_for('download_csv') }}">
-            <input type="hidden" name="rows" value='{{ quote_rows|tojson }}'>
-            <button class="secondary" type="submit">CSV 다운로드</button>
-          </form>
+          {% if recommendation.all_passed %}
+            <span class="badge ok">전체 조건 충족</span>
+          {% else %}
+            <span class="badge warn">일부 조건 확인 필요</span>
+          {% endif %}
+        </div>
+
+        <div class="summary-grid">
+          <div>
+            <h3>추천 사유</h3>
+            <ul class="reason-list">
+              {% for check in recommendation.checks %}
+                {% if check.passed %}
+                  <li>{{ check.label }} 기준 충족</li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <h3>메일 문구</h3>
+            <pre class="mail">{{ mail_body }}</pre>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>비교 항목</th>
+                <th>요구 조건</th>
+                <th>{{ recommendation.model.display_model }}</th>
+                <th>결과</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for check in recommendation.checks %}
+                <tr>
+                  <td>{{ check.label }}</td>
+                  <td>{{ check.required }}</td>
+                  <td>{{ check.actual }}</td>
+                  <td>
+                    {% if check.passed %}
+                      <span class="badge ok">충족</span>
+                    {% else %}
+                      <span class="badge warn">미충족</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="results">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Candidate Models</p>
+            <h2>후보 모델 비교</h2>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -80,81 +130,27 @@
             <thead>
               <tr>
                 <th>모델</th>
-                <th>SKU</th>
-                <th>설명</th>
-                <th>수량</th>
-                <th>단가</th>
-                <th>합계</th>
-                <th>상태</th>
+                <th>L4/L7</th>
+                <th>SSL TPS</th>
+                <th>동시 커넥션</th>
+                <th>충족</th>
+                <th>미충족</th>
               </tr>
             </thead>
             <tbody>
-              {% for row in quote_rows %}
+              {% for item in evaluations %}
                 <tr>
-                  <td>{{ row.model }}</td>
-                  <td>{{ row.sku }}</td>
-                  <td>{{ row.description }}</td>
-                  <td>{{ row.quantity }}</td>
-                  <td>{{ row.currency }} {{ "{:,.0f}".format(row.sell_unit) }}</td>
-                  <td>{{ row.currency }} {{ "{:,.0f}".format(row.line_total) }}</td>
-                  <td>
-                    {% if row.priced %}
-                      <span class="badge ok">가격 적용</span>
-                    {% else %}
-                      <span class="badge warn">가격 필요</span>
-                    {% endif %}
-                  </td>
+                  <td>{{ item.model.display_model }}</td>
+                  <td>{{ item.model.l4_gbps|int }}G / {{ item.model.l7_gbps|int }}G</td>
+                  <td>{{ "{:,.0f}".format(item.model.ssl_tps) }}</td>
+                  <td>{{ "{:,.0f}".format(item.model.concurrent_connections) }}</td>
+                  <td>{{ item.passed_count }}</td>
+                  <td>{{ item.failed_count }}</td>
                 </tr>
               {% endfor %}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="5">총 견적가</td>
-                <td colspan="2">{{ quote_rows[0].currency }} {{ "{:,.0f}".format(total) }}</td>
-              </tr>
-            </tfoot>
           </table>
         </div>
-
-        <div class="comparison-grid">
-          {% for row in quote_rows %}
-            {% set comparison = comparisons.get(row.model) %}
-            {% if comparison %}
-              <article class="comparison">
-                <h3>{{ row.model }} 경쟁사 비교</h3>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>항목</th>
-                      <th>{{ row.model }}</th>
-                      {% for competitor in comparison.competitors %}
-                        <th>{{ competitor }}</th>
-                      {% endfor %}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for item in comparison.rows[:8] %}
-                      <tr>
-                        <td>{{ item.metric }}</td>
-                        <td>{{ item["values"].get(row.model, "-") }}</td>
-                        {% for competitor in comparison.competitors %}
-                          <td>{{ item["values"].get(competitor, "-") }}</td>
-                        {% endfor %}
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </article>
-            {% endif %}
-          {% endfor %}
-        </div>
-      </section>
-    {% endif %}
-
-    {% if rfq_text %}
-      <section class="results">
-        <h2>추출 텍스트 미리보기</h2>
-        <pre>{{ rfq_text }}</pre>
       </section>
     {% endif %}
   </body>

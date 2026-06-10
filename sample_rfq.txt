@@ -1,5 +1,9 @@
-고객 요청 사항
+고객 요구사항
 
-ADC 장비 교체 검토 중입니다.
-F5 r4600 2대 기준으로 견적 부탁드립니다.
-SSL TPS와 L4/L7 Throughput 비교 근거도 포함해주세요.
+L4 Throughput 20Gbps 이상
+L7 Throughput 13Gbps 이상
+Concurrent Connection 19M 이상
+SSL TPS 7000 이상
+1G/10G/25G SFP+ 4Port 이상
+SSD 480GB 이상
+전원/FAN 이중화
