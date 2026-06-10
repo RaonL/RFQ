@@ -25,7 +25,7 @@ QUALITATIVE_FEATURES = {
     },
     "redundant_fan": {
         "label": "FAN 이중화/Hot-Swap",
-        "keywords": ["fan", "팬", "hot-swap", "hotswap", "hot swap", "이중화"],
+        "keywords": ["fan", "팬", "hot-swap", "hotswap", "hot swap"],
         "supported": True,
     },
 }
@@ -95,6 +95,26 @@ def number_with_unit(value):
     return number
 
 
+def parse_requested_number(text):
+    if text is None:
+        return None
+    normalized = str(text).replace(",", "").strip().lower()
+    found = re.search(r"(\d+(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|k|m)?", normalized)
+    if not found:
+        return None
+    number = float(found.group(1))
+    unit = found.group(2) or ""
+    if unit == "억":
+        return number * 100_000_000
+    if unit == "만":
+        return number * 10_000
+    if unit == "k":
+        return number * 1_000
+    if unit == "m":
+        return number * 1_000_000
+    return number
+
+
 def parse_throughput_pair(value):
     text = str(value or "")
     numbers = [float(item) for item in re.findall(r"(\d+(?:\.\d+)?)\s*G", text, re.IGNORECASE)]
@@ -109,14 +129,19 @@ def parse_ports(interface_text):
     text = str(interface_text or "").lower()
     ports = {
         "sfp": 0,
+        "qsfp": 0,
         "copper": 0,
         "speed_1g": 0,
         "speed_10g": 0,
         "speed_25g": 0,
+        "speed_40g": 0,
+        "speed_100g": 0,
     }
 
     for count, desc in re.findall(r"(\d+)\s*x\s*([^,]+)", text):
         qty = int(count)
+        if "qsfp" in desc:
+            ports["qsfp"] += qty
         if "sfp" in desc:
             ports["sfp"] += qty
         if "copper" in desc or "utp" in desc or "rj45" in desc:
@@ -127,6 +152,10 @@ def parse_ports(interface_text):
             ports["speed_10g"] += qty
         if "25g" in desc:
             ports["speed_25g"] += qty
+        if "40g" in desc:
+            ports["speed_40g"] += qty
+        if "100g" in desc or "100ge" in desc:
+            ports["speed_100g"] += qty
 
     return ports
 
@@ -144,6 +173,7 @@ def normalize_model(model):
         "raw_specs": specs,
         "l4_gbps": l4,
         "l7_gbps": l7,
+        "l4_cps": number_with_unit(specs.get("L4 CPS")),
         "ssl_tps": number_with_unit(
             specs.get("SSL TPS (RSA 2K)") or specs.get("SSL TPS RSA 2K")
         ),
@@ -169,17 +199,10 @@ def extract_threshold(text, keywords, unit_hint=None):
         if idx < 0:
             continue
         window = lowered[idx + len(key) : idx + len(key) + 90]
-        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(gbps|gb|g|tps|k|m)?", window)
+        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|k|m)?", window)
         if not found:
             continue
-        raw = found.group(1).replace(",", "")
-        number = float(raw)
-        unit = (found.group(2) or unit_hint or "").lower()
-        if unit == "k":
-            return number * 1_000
-        if unit == "m":
-            return number * 1_000_000
-        return number
+        return parse_requested_number(found.group(0))
     return None
 
 
@@ -191,7 +214,7 @@ def extract_port_requirement(text, keywords):
             continue
         window = lowered[max(0, idx - 40) : idx + 80]
         patterns = [
-            r"(\d+)\s*(?:port|ports|포트|port 이상)",
+            r"(\d+)\s*(?:port|ports|포트)",
             r"(\d+)\s*(?:개|ea)\s*(?:이상)?",
         ]
         for pattern in patterns:
@@ -205,13 +228,24 @@ def parse_requirements(text):
     requirements = []
 
     numeric_checks = [
-        ("l4_gbps", "L4 Throughput", ["l4 throughput", "l4 처리량", "l4"], "Gbps"),
+        (
+            "l4_gbps",
+            "L4 Throughput",
+            ["l4 throughput", "l4 처리량", "처리 성능", "throughput"],
+            "Gbps",
+        ),
         ("l7_gbps", "L7 Throughput", ["l7 throughput", "l7 처리량", "l7"], "Gbps"),
+        (
+            "l4_cps",
+            "L4 CPS",
+            ["l4 cps", "connections per second", "cps"],
+            "CPS",
+        ),
         ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps", "ssl"], "TPS"),
         (
             "concurrent_connections",
             "Concurrent Connection",
-            ["concurrent connection", "동시 커넥션", "동시접속", "동시 연결", "connection"],
+            ["concurrent connection", "동시 커넥션", "동시 세션", "동시접속", "동시 연결", "session"],
             "",
         ),
         ("ssd_gb", "SSD", ["ssd", "storage", "disk", "스토리지"], "GB"),
@@ -229,6 +263,8 @@ def parse_requirements(text):
         ("speed_1g", "1G 지원 Port", ["1g"]),
         ("speed_10g", "10G 지원 Port", ["10g"]),
         ("speed_25g", "25G 지원 Port", ["25g"]),
+        ("speed_40g", "40G 지원 Port", ["40ge", "40g"]),
+        ("speed_100g", "100G 지원 Port", ["100ge", "100g"]),
     ]
 
     for key, label, keywords in port_checks:
@@ -242,7 +278,7 @@ def parse_requirements(text):
             requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
             continue
         if any(word in lowered for word in feature["keywords"]) and (
-            "이중화" in lowered or "hot" in lowered or "redundant" in lowered
+            "이중화" in lowered or "hot" in lowered or "redundant" in lowered or "dual" in lowered
         ):
             requirements.append({"key": key, "label": feature["label"], "value": True, "unit": ""})
 
@@ -261,23 +297,31 @@ def format_requirement_value(req):
     if value is True:
         return "필수"
     if req["key"] == "concurrent_connections":
+        if value >= 1_000_000_000:
+            return f"{value / 1_000_000_000:g}B 이상"
         return f"{value / 1_000_000:g}M 이상"
     if req["key"] == "ssl_tps":
         return f"{value:,.0f} TPS 이상"
+    if req["key"] == "l4_cps":
+        return f"{value:,.0f} CPS 이상"
     return f"{value:g}{req['unit']} 이상"
 
 
 def format_model_value(model, key):
     value = model.get(key)
     if key == "concurrent_connections":
+        if value >= 1_000_000_000:
+            return f"{value / 1_000_000_000:g}B"
         return f"{value / 1_000_000:g}M"
     if key == "ssl_tps":
         return f"{value:,.0f} TPS"
+    if key == "l4_cps":
+        return f"{value:,.0f} CPS"
     if key in {"l4_gbps", "l7_gbps"}:
         return f"{value:g}Gbps"
     if key in {"ssd_gb", "memory_gb"}:
         return f"{value:g}GB"
-    if key in {"sfp", "copper", "speed_1g", "speed_10g", "speed_25g"}:
+    if key in {"sfp", "qsfp", "copper", "speed_1g", "speed_10g", "speed_25g", "speed_40g", "speed_100g"}:
         return f"{int(value)}Port"
     if key in {"redundant_power", "redundant_fan"}:
         return "지원" if value else "확인 필요"
@@ -286,12 +330,16 @@ def format_model_value(model, key):
 
 def evaluate_model(model, requirements):
     checks = []
+    score = 0.0
     for req in requirements:
         actual = model.get(req["key"])
         if req["value"] is True:
             passed = bool(actual)
+            score += 1.0 if passed else 0.0
         else:
             passed = actual is not None and float(actual) >= float(req["value"])
+            if actual is not None and float(req["value"]) > 0:
+                score += min(float(actual) / float(req["value"]), 1.0)
         checks.append(
             {
                 "label": req["label"],
@@ -308,6 +356,7 @@ def evaluate_model(model, requirements):
         "passed_count": passed_count,
         "failed_count": len(checks) - passed_count,
         "all_passed": passed_count == len(checks) and bool(checks),
+        "score": score,
     }
 
 
@@ -318,6 +367,7 @@ def recommend_model(requirements, reference):
         key=lambda item: (
             0 if item["all_passed"] else 1,
             item["failed_count"],
+            -item["score"],
             item["model"].get("l4_gbps", 0),
             item["model"].get("ssl_tps", 0),
         )
@@ -333,8 +383,8 @@ def mail_text(recommendation):
             "요구하신 주요 성능 및 구성 조건을 충족하므로 해당 장비로 제안 진행하시면 됩니다."
         )
     return (
-        f"문의 주신 스펙 기준으로는 {model} 모델이 가장 근접합니다.\n"
-        "일부 항목은 추가 확인이 필요하므로 세부 요구사항 확인 후 제안 진행을 권장드립니다."
+        "문의 주신 스펙을 모두 만족하는 F5 rSeries 단일 장비는 현재 등록된 기준 데이터에서 확인되지 않습니다.\n"
+        f"가장 근접한 후보는 {model} 모델이지만, 미충족 항목이 있으므로 상위 구성/복수 장비/요구사항 조정 여부를 추가 확인해야 합니다."
     )
 
 

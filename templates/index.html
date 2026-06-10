@@ -61,7 +61,12 @@
         <div class="section-title">
           <div>
             <p class="eyebrow">Recommendation</p>
-            <h2>추천 장비: {{ recommendation.model.display_model }}</h2>
+            {% if recommendation.all_passed %}
+              <h2>추천 장비: {{ recommendation.model.display_model }}</h2>
+            {% else %}
+              <h2>충족 모델 없음</h2>
+              <p class="subtext">가장 근접한 후보: {{ recommendation.model.display_model }}</p>
+            {% endif %}
           </div>
           {% if recommendation.all_passed %}
             <span class="badge ok">전체 조건 충족</span>
@@ -72,11 +77,13 @@
 
         <div class="summary-grid">
           <div>
-            <h3>추천 사유</h3>
+            <h3>{% if recommendation.all_passed %}추천 사유{% else %}근접 후보 기준{% endif %}</h3>
             <ul class="reason-list">
               {% for check in recommendation.checks %}
                 {% if check.passed %}
                   <li>{{ check.label }} 기준 충족</li>
+                {% else %}
+                  <li class="failed">{{ check.label }} 기준 미충족</li>
                 {% endif %}
               {% endfor %}
             </ul>

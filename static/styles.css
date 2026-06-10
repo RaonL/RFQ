@@ -57,6 +57,12 @@ h3 {
   letter-spacing: 0;
 }
 
+.subtext {
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .eyebrow {
   color: var(--brand);
   font-size: 12px;
@@ -276,6 +282,10 @@ tfoot td {
 
 .reason-list li {
   line-height: 1.45;
+}
+
+.reason-list .failed {
+  color: #9a3412;
 }
 
 .mail {
