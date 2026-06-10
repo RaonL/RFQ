@@ -119,7 +119,7 @@ def number_with_unit(value):
 
 def parse_requested_number(text):
     normalized = str(text or "").replace(",", "").strip().lower()
-    found = re.search(r"(\d+(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|k|m)?", normalized)
+    found = re.search(r"(\d+(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|rps|k|m)?", normalized)
     if not found:
         return None
     number = float(found.group(1))
@@ -237,7 +237,7 @@ def extract_threshold(text, keywords, allowed_units=None, require_condition=True
         window = lowered[idx + len(key) : idx + len(key) + 100]
         if require_condition and not any(token in window for token in ["이상", "최소", "지원", ">=", "more", "over"]):
             continue
-        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|k|m)?", window)
+        found = re.search(r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(억|만|gbps|ge|gb|g|tps|cps|rps|k|m)?", window)
         if found:
             unit = (found.group(2) or "").lower()
             if allowed_units is not None and unit not in allowed_units:
@@ -278,6 +278,7 @@ def add_port_requirement(requirements, key, label, value):
 
 def extract_datasheet_port_requirements(text):
     requirements = []
+    handled_lines = []
     for raw_line in re.split(r"[\n\r•*]+", text):
         line = normalize_slash_speed_text(raw_line)
         if "port" not in line and "포트" not in line:
@@ -287,21 +288,30 @@ def extract_datasheet_port_requirements(text):
             continue
         count = int(count_match.group(1))
         compact = line.replace(" ", "")
-        has_1g = bool(re.search(r"(^|[^0-9])1g\b", compact) or "/1g" in compact)
-        has_10g = bool(re.search(r"(^|[^0-9])10g\b", compact) or re.search(r"(^|[^0-9])10/", compact) or "/10/" in compact)
-        has_25g = bool(re.search(r"(^|[^0-9])25g\b", compact) or re.search(r"(^|[^0-9])25/", compact))
-        has_100g = bool(re.search(r"(^|[^0-9])100g(?:e)?\b", compact) or "100ge" in compact)
+        has_1g = "1g" in compact
+        has_10g = "10g" in compact or "10/" in compact or "/10/" in compact
+        has_25g = "25g" in compact or "25/" in compact
+        has_100g = "100g" in compact or "100ge" in compact
         is_copper = any(token in line for token in ["copper", "utp", "rj45"])
         is_fiber = any(token in line for token in ["fiber", "sfp", "sfp+", "sfp28"])
+        speed_count = sum([has_1g, has_10g, has_25g, has_100g])
 
         if is_copper:
+            handled_lines.append(line)
+            if speed_count > 1:
+                if has_10g:
+                    add_port_requirement(requirements, "copper_10g_ports", "10G Copper/UTP/RJ45 Port", count)
+                elif has_1g:
+                    add_port_requirement(requirements, "copper_1g_ports", "1G Copper/UTP/RJ45 Port", count)
+                continue
             if has_10g:
                 add_port_requirement(requirements, "copper_10g_ports", "10G Copper/UTP/RJ45 Port", count)
             if has_1g or not has_10g:
                 add_port_requirement(requirements, "copper_1g_ports", "1G Copper/UTP/RJ45 Port", count)
 
         if is_fiber:
-            if "sfp28" not in line and "sfp+" not in line and "sfp" not in line:
+            handled_lines.append(line)
+            if speed_count > 1:
                 if has_100g:
                     add_port_requirement(requirements, "qsfp28_100g_ports", "100G QSFP28 Port", count)
                 elif has_25g:
@@ -320,7 +330,7 @@ def extract_datasheet_port_requirements(text):
             if has_100g:
                 add_port_requirement(requirements, "qsfp28_100g_ports", "100G QSFP28 Port", count)
 
-    return requirements
+    return requirements, handled_lines
 
 
 def parse_requirements(text):
@@ -364,7 +374,8 @@ def parse_requirements(text):
         if value is not None:
             requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
 
-    requirements.extend(extract_datasheet_port_requirements(text))
+    datasheet_port_requirements, handled_port_lines = extract_datasheet_port_requirements(text)
+    requirements.extend(datasheet_port_requirements)
 
     port_checks = [
         ("sfp28_25g_ports", "25G SFP28 Port", ["sfp28", "25g"]),
@@ -377,6 +388,8 @@ def parse_requirements(text):
     ]
 
     for key, label, keywords in port_checks:
+        if any(keyword.lower() in line for line in handled_port_lines for keyword in keywords):
+            continue
         if key == "copper_1g_ports" and any(
             token in text.lower() for token in ["10g copper", "10g utp", "10g rj45"]
         ):
