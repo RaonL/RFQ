@@ -159,12 +159,16 @@ def parse_ports(interface_text):
 
     for count, desc in re.findall(r"(\d+)\s*x\s*([^,]+)", text):
         qty = int(count)
-        is_copper = any(token in desc for token in ["copper", "utp", "rj45"])
+        is_base_t_1g = "base-t" in desc and not re.search(r"\b10\s*g", desc)
+        is_copper = any(token in desc for token in ["copper", "utp", "rj45", "base-t", "baset"])
         is_sfp28 = "sfp28" in desc
-        is_sfp_plus = "sfp+" in desc or "sfp" in desc
+        is_sfp_plus = "sfp+" in desc or ("sfp" in desc and not is_sfp28)
         is_qsfp = "qsfp" in desc
 
         if is_copper:
+            if is_base_t_1g:
+                ports["copper_1g_ports"] += qty
+                continue
             if "1g" in desc:
                 ports["copper_1g_ports"] += qty
             if "10g" in desc:
@@ -173,6 +177,8 @@ def parse_ports(interface_text):
 
         if is_sfp28 and "25g" in desc:
             ports["sfp28_25g_ports"] += qty
+        if is_sfp28 and "10g" in desc:
+            ports["sfp_plus_10g_ports"] += qty
         if is_sfp_plus and "10g" in desc:
             ports["sfp_plus_10g_ports"] += qty
         if is_sfp_plus and "1g" in desc:
@@ -215,6 +221,7 @@ def normalize_model(model):
         "l7_gbps": l7,
         "l4_cps": number_with_unit(specs.get("L4 CPS")),
         "l7_rps": number_with_unit(specs.get("L7 RPS (HTTP)")),
+        "arp_table": None,
         "ssl_tps": number_with_unit(
             specs.get("SSL TPS (RSA 2K)") or specs.get("SSL TPS RSA 2K")
         ),
@@ -288,16 +295,20 @@ def extract_datasheet_port_requirements(text):
             continue
         count = int(count_match.group(1))
         compact = line.replace(" ", "")
+        is_base_t_1g = "base-t" in compact and "10g" not in compact
         has_1g = "1g" in compact
-        has_10g = "10g" in compact or "10/" in compact or "/10/" in compact
+        has_10g = not is_base_t_1g and ("10g" in compact or "10/" in compact or "/10/" in compact)
         has_25g = "25g" in compact or "25/" in compact
         has_100g = "100g" in compact or "100ge" in compact
-        is_copper = any(token in line for token in ["copper", "utp", "rj45"])
+        is_copper = any(token in line for token in ["copper", "utp", "rj45", "base-t", "baset"])
         is_fiber = any(token in line for token in ["fiber", "sfp", "sfp+", "sfp28"])
         speed_count = sum([has_1g, has_10g, has_25g, has_100g])
 
         if is_copper:
             handled_lines.append(line)
+            if is_base_t_1g:
+                add_port_requirement(requirements, "copper_1g_ports", "1G Copper/UTP/RJ45 Port", count)
+                continue
             if speed_count > 1:
                 if has_10g:
                     add_port_requirement(requirements, "copper_10g_ports", "10G Copper/UTP/RJ45 Port", count)
@@ -316,6 +327,8 @@ def extract_datasheet_port_requirements(text):
                     add_port_requirement(requirements, "qsfp28_100g_ports", "100G QSFP28 Port", count)
                 elif has_25g:
                     add_port_requirement(requirements, "sfp28_25g_ports", "25G SFP28 Port", count)
+                    if has_10g:
+                        add_port_requirement(requirements, "sfp_plus_10g_ports", "10G SFP+ Port", count)
                 elif has_10g:
                     add_port_requirement(requirements, "sfp_plus_10g_ports", "10G SFP+ Port", count)
                 elif has_1g:
@@ -370,6 +383,22 @@ def parse_requirements(text):
     ]
 
     for key, label, keywords, unit, allowed_units in numeric_checks:
+        value = extract_threshold(text, keywords, allowed_units, require_condition=False)
+        if value is not None:
+            requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
+
+    supplemental_checks = [
+        ("l4_cps", "L4 CPS", ["unit connection", "\ub2e8\uc704 \ucee4\ub125\uc158"], "CPS", {"cps", "k", "m"}),
+        (
+            "l7_rps",
+            "L7 TPS/RPS",
+            ["transaction", "transactions per second", "\ub2e8\uc704 \ud2b8\ub79c\uc7ad\uc158", "\ud2b8\ub79c\uc7ad\uc158"],
+            "TPS",
+            {"tps", "rps", "k", "m"},
+        ),
+        ("arp_table", "ARP Table", ["arp table", "arp"], "", {"k", "m"}),
+    ]
+    for key, label, keywords, unit, allowed_units in supplemental_checks:
         value = extract_threshold(text, keywords, allowed_units, require_condition=False)
         if value is not None:
             requirements.append({"key": key, "label": label, "value": value, "unit": unit, "type": "numeric"})
@@ -438,6 +467,8 @@ def format_requirement_value(req):
 
 def format_model_value(model, key):
     value = model.get(key)
+    if value is None:
+        return "N/A"
     if key == "concurrent_connections":
         if value >= 1_000_000_000:
             return f"{value / 1_000_000_000:g}B"
