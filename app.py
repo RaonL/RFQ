@@ -204,18 +204,60 @@ def tier_for_model(model_name):
     return MODEL_TIERS.get(str(model_name or "").lower(), 999)
 
 
+def platform_visual(model_name):
+    name = str(model_name or "").lower()
+    base = "https://techdocs.f5.com"
+    if any(token in name for token in ["r2600", "r2800"]):
+        return {
+            "platform_family": "r2000 Series",
+            "platform_image_url": f"{base}/bigip/r2000-front.png",
+            "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
+        }
+    if any(token in name for token in ["r4600", "r4800"]):
+        return {
+            "platform_family": "r4000 Series",
+            "platform_image_url": f"{base}/bigip/r4000-front.png",
+            "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
+        }
+    if any(token in name for token in ["r5600", "r5800", "r5900"]):
+        return {
+            "platform_family": "r5000 Series",
+            "platform_image_url": f"{base}/bigip/r5000-front-num.png",
+            "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
+        }
+    if any(token in name for token in ["r10600", "r10800", "r10900"]):
+        return {
+            "platform_family": "r10000 Series",
+            "platform_image_url": f"{base}/bigip/r10000-front-num.png",
+            "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
+        }
+    if any(token in name for token in ["r12600", "r12800", "r12900"]):
+        return {
+            "platform_family": "r12000 Series",
+            "platform_image_url": f"{base}/bigip/r12000-front-num.png",
+            "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
+        }
+    return {
+        "platform_family": "rSeries",
+        "platform_image_url": "",
+        "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/",
+    }
+
+
 def normalize_model(model):
     specs = model.get("specs", {})
     l4, l7 = parse_throughput_pair(specs.get("L4/L7 Throughput"))
     model_name = model.get("model", "")
     ports = parse_ports(specs.get("인터페이스"))
     tier = int(model.get("tier") or tier_for_model(model_name))
+    visual = platform_visual(model_name)
 
     return {
         "model": model_name,
         "display_model": display_model_name(model_name),
         "tier": tier,
         "series": model.get("series", ""),
+        **visual,
         "raw_specs": specs,
         "l4_gbps": l4,
         "l7_gbps": l7,
