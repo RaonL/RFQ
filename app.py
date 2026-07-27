@@ -411,14 +411,14 @@ def parse_requirements(text):
             {"gbps", "g"},
         ),
         ("l7_rps", "L7 RPS", ["l7 requests per second", "l7 rps", "requests per second", "rps"], "RPS", {"rps", "만", "억", "k", "m"}),
-        ("l4_cps", "L4 CPS", ["l4 connections per second", "l4 cps", "connections per second", "cps"], "CPS", {"cps", "만", "억", "k", "m"}),
+        ("l4_cps", "L4 CPS", ["l4 connections per second", "l4 cps", "connections per second", "cps"], "CPS", {"", "cps", "만", "억", "k", "m"}),
         ("ssl_tps", "SSL TPS", ["ssl 2k tps", "ssl tps"], "TPS", {"tps", "만", "억", "k", "m"}),
         (
             "concurrent_connections",
             "Concurrent Connection",
             ["concurrent connection", "동시 커넥션", "동시 세션", "동시접속", "동시 연결", "session"],
             "",
-            {"만", "억", "k", "m"},
+            {"", "만", "억", "k", "m"},
         ),
         ("ssd_gb", "SSD", ["hard drive", "hard disk", "storage", "disk", "스토리지", "ssd"], "GB", {"gb", "g"}),
         ("memory_gb", "Memory", ["memory", "메모리", "ram"], "GB", {"gb", "g"}),
@@ -570,6 +570,22 @@ def evaluate_model(model, requirements):
     passed_count = sum(1 for check in checks if check["passed"])
     failed_checks = [check for check in checks if not check["passed"]]
     fit_score = round((passed_count / total) * 100, 1) if total else 0
+
+    # 단순 충족 개수만으로는 모든 모델이 같은 항목에서 실패할 때
+    # 낮은 tier가 최근접 모델로 선택된다. 요구값 대비 실제 부족 비율을
+    # 함께 계산해 사양 차이가 가장 작은 장비를 우선한다.
+    shortfall = 0.0
+    for req in requirements:
+        actual = model.get(req["key"])
+        required = req["value"]
+        if required is True:
+            shortfall += 0.0 if actual is True else 1.0
+        elif actual is None or float(required) <= 0:
+            shortfall += 1.0 if actual is None else 0.0
+        else:
+            shortfall += max(0.0, (float(required) - float(actual)) / float(required))
+    shortfall_score = round((shortfall / total) * 100, 2) if total else 100.0
+
     return {
         "model": model,
         "checks": checks,
@@ -577,6 +593,7 @@ def evaluate_model(model, requirements):
         "failed_count": total - passed_count,
         "failed_checks": failed_checks,
         "fit_score": fit_score,
+        "shortfall_score": shortfall_score,
         "all_passed": total > 0 and passed_count == total,
     }
 
@@ -628,7 +645,12 @@ def recommend_model(requirements, reference):
     matched.sort(key=lambda item: item["model"]["tier"])
     alternatives = sorted(
         evaluations,
-        key=lambda item: (-item["fit_score"], item["failed_count"], item["model"]["tier"]),
+        key=lambda item: (
+            item["shortfall_score"],
+            item["failed_count"],
+            -item["fit_score"],
+            -item["model"]["tier"],
+        ),
     )[:3]
     return (matched[0] if matched else None), alternatives, evaluations
 
