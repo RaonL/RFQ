@@ -46,9 +46,9 @@
 
       <section class="panel">
         <h2>등록된 F5 모델</h2>
-        <p class="panel-help">F5 공식 TechDocs의 전면 포트 이미지를 함께 표시합니다. 이미지를 클릭하면 원본 플랫폼 가이드로 이동합니다.</p>
+        <p class="panel-help">업로드한 실제 전면 포트 이미지 4개만 표시합니다. 이미지를 클릭하면 F5 플랫폼 가이드로 이동합니다.</p>
         <div class="model-gallery">
-          {% for item in models %}
+          {% for item in platform_images %}
             <article class="model-card">
               <a class="device-frame" href="{{ item.platform_guide_url }}" target="_blank" rel="noopener">
                 {% if item.platform_image_url %}
@@ -59,15 +59,11 @@
               </a>
               <div class="model-meta">
                 <div>
-                  <strong>{{ item.display_model }}</strong>
-                  <span>{{ item.platform_family }} · Tier {{ item.tier }}</span>
+                  <strong>{{ item.platform_family }}</strong>
+                  <span>{{ item.models }}</span>
                 </div>
                 <div class="spec-chips">
-                  <span>L4 {{ item.l4_gbps|int }}G</span>
-                  <span>L7 {{ item.l7_gbps|int }}G</span>
-                  <span>QSFP28 {{ item.qsfp28_100g_ports }}Port</span>
-                  <span>SFP28/SFP+ {{ item.sfp_plus_10g_ports }}Port</span>
-                  <span>RJ45 {{ item.copper_1g_ports }}Port</span>
+                  <span>{{ item.interfaces }}</span>
                 </div>
               </div>
             </article>

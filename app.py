@@ -30,9 +30,40 @@ MODEL_TIER_ORDER = [
     "F5 r10900",
     "F5 r12600-DS",
     "F5 r12800-DS",
-    "F5 r12900-DS",
 ]
 MODEL_TIERS = {model.lower(): index + 1 for index, model in enumerate(MODEL_TIER_ORDER)}
+EXCLUDED_MODELS = {"f5 r12900-ds"}
+
+PLATFORM_GALLERY = [
+    {
+        "platform_family": "r2000 Series",
+        "platform_image_url": "/static/platforms/r2000-front-view.png",
+        "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
+        "models": "R2600 / R2800",
+        "interfaces": "4x 25G/10G/1G SFP28/SFP+/SFP, 4x 10G/1G Copper",
+    },
+    {
+        "platform_family": "r4000 Series",
+        "platform_image_url": "/static/platforms/r4000-front-view.png",
+        "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
+        "models": "R4600 / R4800",
+        "interfaces": "4x 25G/10G/1G SFP28/SFP+/SFP, 4x 10G/1G Copper",
+    },
+    {
+        "platform_family": "r5000 Series",
+        "platform_image_url": "/static/platforms/r5000-front-view.png",
+        "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
+        "models": "R5600 / R5800 / R5900",
+        "interfaces": "2x 100G/40G QSFP28/QSFP+, 8x 25G/10G SFP28/SFP+",
+    },
+    {
+        "platform_family": "r10000 Series",
+        "platform_image_url": "/static/platforms/r10000-front-view.png",
+        "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
+        "models": "R10600 / R10800 / R10900",
+        "interfaces": "4x 100G/40G QSFP28/QSFP+, 16x 25G/10G SFP28/SFP+",
+    },
+]
 
 QUALITATIVE_FEATURES = {
     "redundant_power": {
@@ -61,7 +92,25 @@ def clean_text(value):
 def load_reference():
     if not REFERENCE_PATH.exists():
         return {"f5_models": [], "comparisons": [], "sources": [], "pdf_summary": {}}
-    return json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
+    reference = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
+    reference["f5_models"] = [
+        model
+        for model in reference.get("f5_models", [])
+        if str(model.get("model", "")).lower() not in EXCLUDED_MODELS
+    ]
+    reference["comparisons"] = [
+        comparison
+        for comparison in reference.get("comparisons", [])
+        if str(comparison.get("f5_model", "")).lower() not in EXCLUDED_MODELS
+    ]
+    for comparison in reference["comparisons"]:
+        for metric in comparison.get("metrics", []):
+            metric["values"] = {
+                product: value
+                for product, value in metric.get("values", {}).items()
+                if str(product).lower() not in EXCLUDED_MODELS
+            }
+    return reference
 
 
 def text_from_upload(uploaded_file):
@@ -231,7 +280,7 @@ def platform_visual(model_name):
             "platform_image_url": "/static/platforms/r10000-front-view.png",
             "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
         }
-    if any(token in name for token in ["r12600", "r12800", "r12900"]):
+    if any(token in name for token in ["r12600", "r12800"]):
         return {
             "platform_family": "r12000 Series",
             "platform_image_url": f"{base}/bigip/r12000-front-num.png",
@@ -715,6 +764,7 @@ def index():
     reference = load_reference()
     context = {
         "models": [normalize_model(model) for model in reference.get("f5_models", [])],
+        "platform_images": PLATFORM_GALLERY,
         "example_text": (
             "L4 Throughput 20Gbps 이상\n"
             "L7 Throughput 13Gbps 이상\n"

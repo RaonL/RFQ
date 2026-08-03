@@ -222,8 +222,8 @@ button,
 
 .model-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(420px, 1fr));
+  gap: 16px;
   margin-top: 16px;
 }
 
@@ -239,7 +239,7 @@ button,
 .device-frame {
   display: grid;
   place-items: center;
-  min-height: 210px;
+  min-height: 260px;
   border: 1px solid #e2e8f0;
   border-radius: 7px;
   background: #ffffff;
@@ -248,7 +248,7 @@ button,
 
 .device-frame img {
   width: 100%;
-  max-height: 260px;
+  max-height: 320px;
   object-fit: contain;
   padding: 6px;
 }
@@ -593,6 +593,7 @@ pre {
   }
 
   .model-row,
+  .model-gallery,
   .grid.two,
   .summary-grid,
   .near-grid,
