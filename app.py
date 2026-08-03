@@ -210,25 +210,25 @@ def platform_visual(model_name):
     if any(token in name for token in ["r2600", "r2800"]):
         return {
             "platform_family": "r2000 Series",
-            "platform_image_url": f"{base}/bigip/r2000-front.png",
+            "platform_image_url": "/static/platforms/r2000-front-view.png",
             "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
         }
     if any(token in name for token in ["r4600", "r4800"]):
         return {
             "platform_family": "r4000 Series",
-            "platform_image_url": f"{base}/bigip/r4000-front.png",
+            "platform_image_url": "/static/platforms/r4000-front-view.png",
             "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r2000r4000-series/title--platform-overview.html#f5-r2000r4000-series-models",
         }
     if any(token in name for token in ["r5600", "r5800", "r5900"]):
         return {
             "platform_family": "r5000 Series",
-            "platform_image_url": f"{base}/bigip/r5000-front-num.png",
+            "platform_image_url": "/static/platforms/r5000-front-view.png",
             "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
         }
     if any(token in name for token in ["r10600", "r10800", "r10900"]):
         return {
             "platform_family": "r10000 Series",
-            "platform_image_url": f"{base}/bigip/r10000-front-num.png",
+            "platform_image_url": "/static/platforms/r10000-front-view.png",
             "platform_guide_url": "https://techdocs.f5.com/en-us/hardware/platform-guide-r5000r10000-series/title--platform-overview.html#f5-r5000r10000r12000-series-models",
         }
     if any(token in name for token in ["r12600", "r12800", "r12900"]):
