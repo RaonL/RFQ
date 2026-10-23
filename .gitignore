@@ -1,6 +1,7 @@
 __pycache__/
 .pytest_cache/
 .venv/
+.deps/
 .env
 *.pyc
 uploads/
@@ -9,3 +10,4 @@ source/
 *.xlsx
 *.xlsm
 !data/pricebook_template.csv
+

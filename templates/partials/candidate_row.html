@@ -5,7 +5,7 @@
   <td>{{ "{:,.0f}".format(item.model.l4_cps) }}</td>
   <td>{{ "{:,.0f}".format(item.model.ssl_tps) }}</td>
   <td>{{ item.fit_score }}%</td>
-  <td>{{ item.passed_count }} / {{ item.failed_count }}</td>
+  <td>{{ item.passed_count }} / {{ item.failed_count }} / {{ item.unknown_count }}</td>
 </tr>
 {% if item.competitors %}
   <tr class="competitor-row">
@@ -27,3 +27,4 @@
     </td>
   </tr>
 {% endif %}
+
