@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseDelimited, rowsToText, pdfItemsToText, decodeText, MAX_FILE_BYTES} from '../site/files.mjs';
+test('CSV quoted comma and quoted newline',()=>assert.deepEqual(parseDelimited('항목,요구규격\r\n"L4 Throughput","20Gbps 이상"\r\n"설명","a,b\nc"'),[['항목','요구규격'],['L4 Throughput','20Gbps 이상'],['설명','a,b\nc']]));
+test('CSV escape quote',()=>assert.deepEqual(parseDelimited('a,"b""c"'),[['a','b"c']]));
+test('invalid CSV quotes error instead of data loss',()=>assert.throws(()=>parseDelimited('a,"broken')));
+test('tab delimited values preserve zero',()=>assert.deepEqual(parseDelimited('항목\t요구규격\nPort\t0','\t')[1],['Port','0']));
+test('select requirement column and ignore offered specs',()=>{let x=rowsToText([['항목','요구규격','제품사양','검토결과'],['Storage','1TB 이상','480GB','미충족']]);assert.equal(x.text,'Storage 1TB 이상');});
+test('missing requirement cell is explicit',()=>{let x=rowsToText([['항목','요구규격','제품사양'],['Memory','','32GB']]);assert.match(x.text,/요구값 누락/);});
+test('no header does not throw away columns',()=>assert.match(rowsToText([['L4 Throughput','20Gbps','13Gbps']]).text,/13Gbps/));
+test('unsupported column data is preserved as a warning',()=>assert.ok(rowsToText([['항목','요구규격','비고'],['Memory','32GB','추가 인증 필수']]).text.includes('추가 인증 필수')));
+test('PDF row ordering is position based',()=>assert.equal(pdfItemsToText([{str:'20Gbps',transform:[1,0,0,1,100,500]},{str:'L4 Throughput',transform:[1,0,0,1,10,500]},{str:'Memory 32GB',transform:[1,0,0,1,10,450]}]),'L4 Throughput 20Gbps\nMemory 32GB'));
+test('UTF-8 decoder does not silently drop invalid bytes',()=>assert.throws(()=>decodeText(new Uint8Array([255]),'utf-8')));
+test('file limit is 16MiB',()=>assert.equal(MAX_FILE_BYTES,16*1024*1024));
+test('oversized CSV text is rejected before creating cell arrays',()=>assert.throws(()=>parseDelimited('a'.repeat(250001))));

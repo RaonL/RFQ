@@ -11,3 +11,8 @@ source/
 *.xlsm
 !data/pricebook_template.csv
 
+# Static Edition generated output
+node_modules/
+dist/
+dist-fixture/
+test-artifacts/

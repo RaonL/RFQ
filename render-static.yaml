@@ -1,0 +1,21 @@
+# New Static Site blueprint only. Do not overwrite the existing Web Service.
+# In Render UI: Build Command = node scripts/build.mjs, Publish Directory = dist
+services:
+  - type: web
+    name: f5-rfq-static
+    runtime: static
+    buildCommand: node scripts/build.mjs
+    staticPublishPath: ./dist
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /data/*
+        name: Cache-Control
+        value: no-cache

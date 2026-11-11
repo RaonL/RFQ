@@ -1,0 +1,9 @@
+{
+ "fixture":true,"sources":[{"type":"fixture","name":"회귀 시험용 샘플 — 제품 사양 검증 자료 아님"}],
+ "f5_models":[
+ {"model":"F5 r2600","tier":1,"series":"R2000","specs":{"L4/L7 Throughput":"20G / 13G","L4 CPS":"170K","L7 RPS (HTTP)":"475K","SSL TPS (RSA 2K)":"7K","동시 커넥션":"19M","인터페이스":"4x 25G/10G SFP28, 4x 10G/1G Copper","Memory":"32 GB","Storage":"480GB M.2 SSD"}},
+ {"model":"F5 r2800","tier":2,"series":"R2000","specs":{"L4/L7 Throughput":"25G / 17G","L4 CPS":"350K","L7 RPS (HTTP)":"875K","SSL TPS (RSA 2K)":"15K","동시 커넥션":"19M","인터페이스":"4x 25G/10G SFP28, 4x 10G/1G Copper","Memory":"32 GB","Storage":"480GB M.2 SSD"}},
+ {"model":"F5 r5600","tier":5,"series":"R5000","specs":{"L4/L7 Throughput":"95G / 60G","L4 CPS":"1M","L7 RPS (HTTP)":"2.5M","SSL TPS (RSA 2K)":"60K","동시 커넥션":"75M","인터페이스":"2x 100G/40G QSFP28, 8x 25G/10G SFP28","Memory":"128 GB","CPU (Total)":"18 vCPUs 또는 6 F5OS + 12 Tenancy"}},
+ {"model":"F5 r12900-DS","tier":13,"series":"R12000","specs":{"L4/L7 Throughput":"195G / 195G","L4 CPS":"3.5M","L7 RPS (HTTP)":"10.5M","동시 커넥션":"399M"}}
+ ]
+}
