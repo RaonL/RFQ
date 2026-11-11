@@ -30,7 +30,7 @@ const cases = [
 for (const [text,key,expected] of cases) test(`extract ${key}: ${text}`, () => assert.ok(Math.abs(value(text,key)-expected)<1e-8,JSON.stringify(parseRequirements(text))));
 test('same-line missing performance cannot pass',()=> assert.equal(evaluateModel(model(),parseRequirements('L4 Throughput 20Gbps 이상 L7 Throughput 40Gbps 이상')).numericCandidate,false));
 test('linebreak does not change metric pairs',()=> assert.deepEqual(parseRequirements('L4 Throughput 20Gbps 이상 L7 Throughput 40Gbps 이상').filter(r=>r.kind==='numeric').map(r=>[r.key,r.value]),parseRequirements('L4 Throughput 20Gbps 이상\nL7 Throughput 40Gbps 이상').filter(r=>r.kind==='numeric').map(r=>[r.key,r.value])));
-test('qualitative tail remains unknown',()=>assert.equal(evaluateModel(model(),parseRequirements('L4 Throughput 20Gbps 이상 특수 인증서 제출 필수')).numericCandidate,false));
+test('qualitative tail remains reviewable without vetoing numeric comparison',()=>{const r=evaluateModel(model(),parseRequirements('L4 Throughput 20Gbps 이상 특수 인증서 제출 필수'));assert.equal(r.numericCandidate,true);assert.ok(r.reviewRequirements.some(r=>/인증서/.test(r.source)));assert.equal(r.allPassed,false);});
 test('missing heading is never discarded',()=>assert.ok(parseRequirements('L4 Throughput\nL7 Throughput 13Gbps').some(r=>r.kind==='unknown'&&/L4/.test(r.source))));
 test('RSA4096 cannot use RSA2048 figure',()=>assert.equal(evaluateModel(model(),parseRequirements('SSL TPS 7000 이상 RSA 4096')).checks[0].status,'unknown'));
 test('unspecified SSL algorithm is unknown',()=>assert.equal(evaluateModel(model(),parseRequirements('SSL TPS 7000 이상')).checks[0].status,'unknown'));
@@ -45,10 +45,10 @@ test('negative amount is rejected',()=>assert.equal(evaluateModel(model(),parseR
 test('unregistered fields are null not zero',()=>assert.equal(normalizeModel({model:'X',specs:{}}).metrics.l4_cps,null));
 test('shared physical ports cannot be double counted',()=>assert.ok(evaluateModel(model(),parseRequirements('25G SFP28 4Port 이상\n10G SFP+ 4Port 이상')).checks.some(r=>r.key==='physical_ports'&&r.status==='fail')));
 test('optical and copper pools are independent',()=>assert.equal(evaluateModel(model(),parseRequirements('25G SFP28 4Port 이상\n10G Copper 4Port 이상')).numericCandidate,true));
-test('GSLB cannot use DNS Express performance',()=>assert.ok(evaluateModel(model(),parseRequirements('DNS Query QPS 300000 이상')).checks.some(r=>r.status==='unknown')));
+test('explicit GSLB cannot use DNS Express performance',()=>assert.ok(evaluateModel(model(),parseRequirements('DNS GSLB QPS 300000 이상')).checks.some(r=>r.status==='unknown')));
 test('CPU physical and tenant are not conflated',()=>assert.ok(evaluateModel(model(),parseRequirements('CPU 4Core 이상')).checks.some(r=>r.status==='unknown')));
 test('product column is not a requirement',()=>assert.equal(value('Storage\n요구규격: 1TB 이상\n제품사양: 480GB M.2 SSD\n검토결과: 미충족','ssd_gb'),1000));
-test('features stay unknown without evidence',()=>assert.ok(evaluateModel(model(),parseRequirements('전원/FAN 이중화')).checks.every(r=>r.status==='unknown')));
+test('features remain separate and cannot become full approval',()=>{const r=evaluateModel(model(),parseRequirements('전원/FAN 이중화'));assert.equal(r.checks.length,0);assert.ok(r.reviewRequirements.some(r=>r.kind==='boolean'));assert.equal(r.allPassed,false);});
 test('log server separated and not ADC candidate',()=>{let g=parseGroups('웹방화벽(WAF)\nSSD 2TB 이상\n로그서버(WAF)\nStorage 20TB 이상');assert.equal(g.length,2);assert.equal(g[1].kind,'log');assert.equal(g[1].requirements[0].value,20000);});
 test('quantity is metadata not performance',()=>{let g=parseGroups('[A]\n8 대\nMemory 32GB');assert.equal(g[0].quantity,'8대');assert.equal(g[0].requirements.length,1);});
 test('empty input has no candidates',()=>assert.equal(evaluateModel(model(),[]).numericCandidate,false));

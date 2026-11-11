@@ -4,7 +4,7 @@ export const METRICS = [
  ['l7_rps','L7 HTTP RPS','RPS',/\bl7\s*(?:http\s*)?(?:rps|requests per second)/ig],
  ['dns_qps','DNS Query QPS/RPS','QPS',/(?:maximum\s*query\s*rps|(?:초당\s*)?dns\s*(?:(?:express|query|쿼리)\s*)?(?:qps|rps|쿼리)|\bqps\b)/ig],
  ['ssl_gbps','SSL/TLS Throughput','Gbps',/(?:ssl|tls)(?:\/tls)?\s*(?:throughput|처리량|bulk)/ig],
- ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?256)?\s*tps/ig],
+ ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?\d+)?\s*tps/ig],
  ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps/ig],
  ['http_gbps','HTTP/WAF Throughput','Gbps',/(?:http|waf)\s*(?:throughput|처리량)/ig],
  ['http_cps','HTTP CPS','CPS',/http\s*cps/ig],
@@ -27,7 +27,7 @@ export const PORT_SPEEDS = {sfp_1g_ports:1,sfp_plus_10g_ports:10,sfp28_25g_ports
 export const LABELS = Object.fromEntries(METRICS.map(([key,label,unit])=>[key,{label,unit}]));
 for(const [key,speed] of Object.entries(PORT_SPEEDS)) LABELS[key]={label:`${speed}G ${key.startsWith('copper')?'Copper':'광'} Port`,unit:'Port'};
 const FEATURES=[
- ['redundant_power','전원 이중화',/(?:전원|power|psu)(?:\s*\/\s*(?:fan|팬))?\s*(?:이중화|redundant|dual)/ig],
+ ['redundant_power','전원 이중화',/(?:전원(?:부)?|power|psu)(?:\s*[,/]\s*(?:fan|팬))?\s*(?:이중화|redundant|dual)/ig],
  ['redundant_fan','FAN 이중화',/(?:전원\s*\/\s*)?(?:fan|팬)\s*(?:이중화|redundant|dual)/ig],
  ['ha','HA 구성',/\bha\b(?:\s*구성)?/ig],['qos','QoS',/\bqos\b/ig],['ddos','DDoS',/\bddos\b/ig],
  ['hot_swap','Hot-Swap',/hot[ -]?swap|fan\s*tray/ig],
@@ -41,7 +41,7 @@ const NUMBER=/(\d[\d,]*(?:\.\d+)?)\s*(tbps|gbps|mbps|tbit\/s|gbit\/s|mbit\/s|tb|
 const HEADING=/^(?:\d+[.)]\s*)?(?:웹방화벽\s*\(waf\)|로그서버\s*\(waf\)|dns\s*gslb(?:\s*[-—–].*)?|l4\s*스위치(?:\s*요구사항)?|\[.+\])$/i;
 const IGNORE=/^(?:구분|주요\s*기능요건|수량|단위|비고|h\/w|인터페이스|주요기능|세부내용|세부\s*규격|성능\s*및\s*규격|요구규격\s*[:：]?)$/i;
 export function normalizeText(text){
- return String(text??'').replace(/\r\n?/g,'\n').replace(/&nbsp;/gi,' ').replace(/&gt;/gi,'>').replace(/&lt;/gi,'<').replace(/&amp;/gi,'&').replace(/\s+\|\s+/g,'\n').replace(/(?<!\d),(?!\d)|;/g,'\n');
+ return String(text??'').replace(/\r\n?/g,'\n').replace(/&nbsp;/gi,' ').replace(/&gt;/gi,'>').replace(/&lt;/gi,'<').replace(/&amp;/gi,'&').replace(/\s+\|\s+/g,'\n').replace(/;/g,'\n');
 }
 export function quantity(number,suffix='',unit=''){
  if(unit==='Gbps' && /[MGT]B(?:ps|\/s)/.test(suffix))return null;
@@ -57,7 +57,12 @@ function operator(text){
  const ops=[];for(const [op,rx] of [['>=',/>=|≥|이상|최소/],['<=',/<=|≤|이하|최대/],['>',/(?<![<>=])>(?!=)|초과/],['<',/(?<![<>=])<(?!=)|미만/],['=',/(?<![<>])=(?!=)|정확히/]])if(rx.test(text))ops.push(op);
  return ops.length>1?null:(ops[0]??'>=');
 }
-function unknown(source,note='해석되지 않은 조건입니다. 원문을 수정하거나 수동 검토하세요.') {return {key:'unparsed',label:'원문 검토 필요',kind:'unknown',value:null,unit:'',operator:'>=',source,note};}
+function unknown(source,note='해석되지 않은 조건입니다. 원문을 수정하거나 수동 검토하세요.',blocksNumeric=/\d/.test(source)) {return {key:'unparsed',label:blocksNumeric?'수치 해석 필요':'별도 검토',kind:'unknown',value:null,unit:'',operator:'>=',source,note,blocksNumeric};}
+export function splitRequirements(requirements){
+ const comparison=[],review=[];
+ for(const r of requirements)(r.kind==='numeric'||r.blocksNumeric?comparison:review).push(r);
+ return {comparison,review};
+}
 function metric(key,value,source,extra={}) {return {key,...(LABELS[key]??{label:key,unit:''}),kind:'numeric',value,operator:'>=',source,note:'',...extra};}
 function scrub(text){return text.replace(/요구\s*규격|요구\s*사항|최소\s*규격|최소|최대|이상|이하|초과|미만|정확히|필수|제공|지원|요구|기능|구성|통일|\b(?:rps|cps|tps|cc|entry|entries|core|cores|vcpu|vcpus|gbps|gb|ports?)\b|업링크|다운링크/gi,'').replace(/[\s:：()[\]{}=<>≥≤,./\-+•·]/g,'').trim();}
 function maskAt(text,start,end){return text.slice(0,start)+' '.repeat(end-start)+text.slice(end);}
@@ -68,7 +73,7 @@ function parseBody(key,label,unit,body,source){
   if(alg)algorithm=/^(?:2\s*k|2048)$/i.test(alg[1])?'rsa2048':'rsa4096';
   else if(/(?:ssl|tls)(?:\/tls)?\s*2k\s*tps/i.test(source))algorithm='rsa2048';
   rest=rest.replace(/rsa\s*[-:(]?\s*(?:2\s*k|4\s*k|2048|4096)\s*(?:bits?)?/ig,' ');
- } else if(key==='ecdsa_tps') {algorithm=/p[- ]?256/i.test(source)?'ecdsa_p256':'unspecified';rest=rest.replace(/p[- ]?256/ig,' ');}
+ } else if(key==='ecdsa_tps') {const curve=source.match(/p[- ]?(\d+)/i);algorithm=curve?'ecdsa_p'+curve[1]:'unspecified';rest=rest.replace(/p[- ]?\d+/ig,' ');}
  if(key==='cpu_cores'){
   rest=rest.replace(/(\d+(?:\.\d+)?)\s*(ghz|mhz)/ig,(_,n,u)=>{result.push(metric('cpu_ghz',quantity(n,u,'GHz'),source,{note:'CPU 주파수는 코어 수와 별도로 검토합니다.'}));return ' ';});
  }
@@ -76,13 +81,14 @@ function parseBody(key,label,unit,body,source){
  if(!matches.length)return {missing:true, requirements:result};
  const m=matches[0], value=quantity(m[1],m[2]??'',unit), op=operator(rest);
  if(value===null||op===null||matches.length>1||/[-−]\s*\d/.test(rest))return {requirements:[...result,unknown(source,'수치·단위·범위 또는 비교 조건이 모호합니다. 한 항목에 한 수치 조건으로 정리하세요.')]};
+ const attachedUnit=/^[a-z]/i.test(rest.slice(m.index+m[0].length))&&!/^(?:rps|cps|tps|cc|entry|entries|ports?)\b/i.test(rest.slice(m.index+m[0].length));
  rest=maskAt(rest,m.index,m.index+m[0].length);
  // Unit suffixes following K/M (e.g. 7K TPS) are syntax, not another condition.
  const req=metric(key,value,source,{label,unit,operator:op,algorithm,
   context:key==='dns_qps'&&/dns\s*express/i.test(source)?'dns_express':key==='cpu_cores'&&/물리|physical/i.test(source)?'physical':'unspecified',
   note:!m[2]?`단위가 없으면 ${unit}로 해석합니다. 추출 결과를 확인하세요.`:''});
  result.unshift(req);
- if(scrub(rest))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`));
+ if(scrub(rest))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`,attachedUnit||/\d/.test(rest)));
  return {requirements:result};
 }
 function parseLine(line){
@@ -94,22 +100,29 @@ function parseLine(line){
   const all=[...speeds.matchAll(/\d+/g)].map(m=>Number(m[0])), speed=Math.max(...all), copper=/copper|utp|rj|base/i.test(medium);
   const key=(copper?{1:'copper_1g_ports',10:'copper_10g_ports'}:{1:'sfp_1g_ports',10:'sfp_plus_10g_ports',25:'sfp28_25g_ports',40:'qsfp_40g_ports',100:'qsfp28_100g_ports'})[speed];
   if(!key)out.push(unknown(s,'등록되지 않은 포트 속도/매체입니다.'));
-  else {out.push(metric(key,Number(count),s,{operator:operator(s)??'>=',note:'물리 포트 동시 할당 기준. 트랜시버·속도 모드와 호환성은 별도 확인.'}));if(all.length>1)out.push(unknown(s,'복수 속도 모드의 모든 속도 지원 여부를 별도 확인해야 합니다.'));}
+  else {out.push(metric(key,Number(count),s,{operator:operator(s)??'>=',note:'물리 포트 동시 할당 기준. 트랜시버·속도 모드와 호환성은 별도 확인.'}));if(all.length>1)out.push(unknown(s,'최고 속도의 포트 수를 비교합니다. 나머지 속도 모드와 매체 호환성은 별도 확인하세요.',false));}
   return ' ';
  });
  for(const [key,label,rx] of FEATURES){rx.lastIndex=0;const ms=[...line.matchAll(rx)];if(ms.length){out.push({key,label,kind:'boolean',value:true,unit:'',operator:'=',source:line,note:'라이선스·구성·공식 지원 근거 확인 필요'});for(const m of ms)text=text.replace(m[0],' ');}}
  const hits=[];
  for(const [key,label,unit,rx] of METRICS){rx.lastIndex=0;for(const m of text.matchAll(rx))hits.push({key,label,unit,start:m.index,end:m.index+m[0].length});}
  hits.sort((a,b)=>a.start-b.start||b.end-a.end);
- const spans=[];for(const h of hits)if(!spans.some(s=>h.start<s.end&&h.end>s.start))spans.push(h);
+ const spans=[];for(const h of hits){
+  if(spans.some(s=>h.start<s.end&&h.end>s.start))continue;
+  // A trailing CPS after a number is a unit, not another metric heading.
+  const previous=spans.at(-1);
+  if(h.key==='l4_cps'&&/^cps$/i.test(text.slice(h.start,h.end))&&previous?.key.endsWith('_cps')&&/\d[\d,.]*\s*[km]?\s*$/i.test(text.slice(previous.end,h.start))&&!/^\s*\d/.test(text.slice(h.end)))continue;
+  spans.push(h);
+ }
  if(!spans.length){if(scrub(text))out.push(unknown(line));return {out,pending:null};}
  if(scrub(text.slice(0,spans[0].start)))out.push(unknown(text.slice(0,spans[0].start)));
  let pending=null;
  for(let i=0;i<spans.length;i++){
   const h=spans[i], end=spans[i+1]?.start??text.length, source=text.slice(h.start,end).trim();
   const parsed=parseBody(h.key,h.label,h.unit,text.slice(h.end,end),source);
+  if(h.key==='dns_qps'&&/gslb/i.test(line))for(const r of parsed.requirements)if(r.key==='dns_qps')r.context='gslb';
   out.push(...parsed.requirements);
-  if(parsed.missing){if(i===spans.length-1)pending={...h,source};else out.push(unknown(source,'요구 수치가 빠져 있습니다.'));}
+  if(parsed.missing){if(i===spans.length-1)pending={...h,source};else out.push(unknown(source,'요구 수치가 빠져 있습니다.',true));}
  }
  return {out,pending};
 }
@@ -126,7 +139,9 @@ function parsePair(line,kind){
 export function parseRequirements(input){
  if(String(input??'').length>250000)throw new Error('입력은 250,000자 이내로 나누어 주세요.');
  const out=[];let pending=null,pair=null,productBlock=false;
- for(const raw of normalizeText(input).split('\n')){
+ // Remove standalone metadata; preserve the complete original input in the UI.
+ const content=String(input??'').split(/\r?\n/).filter(line=>!/^(?:고객사|고객명|설치\s*장소|설치\s*위치)\s*[:：]|^(?:이상입니다|감사합니다)[.!。]?\s*$/.test(line.trim())).join('\n');
+ for(const raw of normalizeText(content).split('\n')){
   const line=raw.replace(/^[\s•ㅇ–—-]+/,'').trim();if(!line)continue;
   if(line.length>4000){out.push(unknown(line.slice(0,4000),'한 줄이 너무 깁니다. 항목별로 나누세요.'));continue;}
   if(/^(?:제품사양|검토결과)\s*[:：]?/i.test(line)){if(/요구규격|요구사항/.test(line))out.push(unknown(line,'제품사양과 요구규격이 같은 줄에 있습니다. 요구조건을 별도 줄로 분리하세요.'));productBlock=/^(?:제품사양|검토결과)\s*[:：]?\s*$/.test(line);continue;}
@@ -136,21 +151,21 @@ export function parseRequirements(input){
   const ph=pairHeader(line);
   if(ph||pair){
    const kind=ph??pair.kind, r=parsePair(line,kind);
-   if(r){if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.'));pending=null;out.push(...r);pair=null;continue;}
-   if(ph){if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.'));pending=null;if(pair)out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.'));pair={kind,source:line};continue;}
-   out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.'));pair=null;
+   if(r){if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;out.push(...r);pair=null;continue;}
+   if(ph){if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;if(pair)out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.',true));pair={kind,source:line};continue;}
+   out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.',true));pair=null;
   }
   if(pending){
    if(/^(?:요구규격\s*[:：]?\s*)?[<>≥≤=]*\s*\d/.test(line)){
     const r=parseBody(pending.key,pending.label,pending.unit,line,`${pending.source}\n${line}`);
-    out.push(...r.requirements);if(r.missing)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.'));pending=null;continue;
+    out.push(...r.requirements);if(r.missing)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;continue;
    }
-   out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.'));pending=null;
+   out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;
   }
   const r=parseLine(line.replace(/^요구규격\s*[:：]?\s*/,''));out.push(...r.out);pending=r.pending;
  }
- if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.'));
- if(pair)out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.'));
+ if(pending)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));
+ if(pair)out.push(unknown(pair.source,'복합 수치가 빠져 있습니다.',true));
  if(out.length>600)throw new Error('추출 항목은 한 번에 600개까지입니다. 장비별로 나누어 주세요.');
  return out.map((r,i)=>({...r,id:`req-${i+1}`,userEdited:false}));
 }
@@ -162,5 +177,9 @@ export function parseGroups(input){
   else {current.lines.push(raw);const q=line.match(/^(?:수량\s*[:：]?\s*)?(\d+)\s*(대|식)(?:\s*일체형)?$/);if(q)current.quantity=q[1]+q[2];}
  }
  if(current.lines.length)groups.push(current);
- return groups.map(({lines,...g})=>({...g,requirements:parseRequirements(lines.join('\n'))})).filter(g=>g.requirements.length);
+ return groups.map(({lines,...g})=>{
+  const requirements=parseRequirements(lines.join('\n'));
+  if(/gslb/i.test(g.name))for(const r of requirements)if(r.key==='dns_qps'&&r.context!=='dns_express')r.context='gslb';
+  return {...g,requirements};
+ }).filter(g=>g.requirements.length);
 }
