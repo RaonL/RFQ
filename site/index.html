@@ -13,17 +13,19 @@
 </header>
 <main id="top">
  <section class="intro" aria-labelledby="page-title">
-  <div><p class="eyebrow">RFQ / SPEC REVIEW</p><h1 id="page-title">요구 수치를 비교하고,<br>장비 후보를 좁히세요.</h1><p class="intro-description">처리량, 연결 수, 포트와 스토리지까지.<br>요구값과 등록값을 한눈에 비교하세요.</p><div class="intro-tags"><span>수치 우선 비교</span><span>추출값 직접 수정</span><span>파일은 내 브라우저에</span></div></div>
-  <aside class="workflow-card" aria-label="비교 진행 안내"><div class="workflow-top"><span>FROM REQUIREMENTS TO CANDIDATES</span><span aria-hidden="true">↗</span></div><ol><li><span>01</span><div>요구사항 입력<small>문장 또는 파일에서 수치 추출</small></div></li><li><span>02</span><div>추출값 확인<small>항목 · 조건 · 단위를 원문과 대조</small></div></li><li><span>03</span><div>장비 후보 비교<small>기능·시험조건은 별도로 검토</small></div></li></ol><p id="catalogue-status" role="status">장비 데이터를 불러오는 중…</p></aside>
+  <h1 id="page-title">RFQ 요구 수치 비교</h1>
+  <p class="intro-description">요구 수치를 추출한 뒤, F5 장비의 등록 사양과 항목별로 비교합니다.</p>
+  <p id="catalogue-status" role="status">장비 데이터를 불러오는 중…</p>
  </section>
  <section class="panel input-panel" id="input-panel" aria-labelledby="input-title">
   <div class="section-head"><div class="section-title"><span class="step">01</span><h2 id="input-title">요구사항 입력</h2></div><button id="example" class="subtle" type="button">예시 넣기 <span aria-hidden="true">↗</span></button></div>
   <div class="input-layout"><div class="input-main">
-   <label for="requirements">RFQ 원문을 붙여넣으세요. 장비가 여러 대라면 [장비명]으로 나눌 수 있습니다.</label>
-   <textarea id="requirements" rows="10" maxlength="250000" spellcheck="false" placeholder="[L4 장비]&#10;&#10;L4 Throughput 20Gbps 이상&#10;L7 Throughput 13Gbps 이상&#10;SSL TPS (RSA 2048bit) 7000 이상&#10;Memory 32GB 이상"></textarea>
+   <label for="requirements">요구규격 원문</label>
+   <textarea id="requirements" rows="6" aria-describedby="input-help" maxlength="250000" spellcheck="false" placeholder="예시&#10;L4 Throughput 20Gbps 이상&#10;SSL TPS (RSA 2048bit) 7000 이상&#10;Memory 32GB 이상"></textarea>
+   <p class="hint" id="input-help">장비가 여러 대라면 원문에서 [장비명]으로 구분하세요.</p>
    <div class="input-bottom"><label class="check"><input id="include-excluded" type="checkbox"> r12900-DS도 비교 후보에 포함</label><button id="parse" type="button" disabled>요구 수치 추출 <span aria-hidden="true">→</span></button></div>
   </div><aside class="file-panel" aria-label="파일 입력 옵션">
-   <div class="file-icon" aria-hidden="true">↥</div><h3>파일로 시작하기</h3><p>문서의 요구규격을<br>입력란으로 가져옵니다.</p>
+   <h3>파일에서 가져오기</h3>
    <label class="file-label" for="file">파일 선택<input id="file" type="file" accept=".txt,.csv,.xlsx,.xlsm,.pdf"></label>
    <label class="encoding-label" for="encoding">TXT / CSV 인코딩</label><select id="encoding"><option value="utf-8">UTF-8</option><option value="euc-kr">CP949 / EUC-KR</option></select>
    <p class="hint">TXT · CSV · XLSX · XLSM · PDF<br>최대 16MB / 스캔 PDF 제외</p>
@@ -36,7 +38,7 @@
  </section>
  <section id="results" hidden aria-labelledby="results-title"><div class="section-head"><div class="section-title"><span class="step">03</span><h2 id="results-title">수치 비교 결과</h2></div><button id="export" class="subtle" type="button">JSON 저장 <span aria-hidden="true">↓</span></button></div><div id="result-groups"></div></section>
  <section class="reference-section" aria-label="참고 자료">
-  <div class="reference-intro"><p class="eyebrow">REFERENCE</p><h2>비교의 기준도,<br>직접 확인하세요.</h2><p>등록 사양과 판정 범위를 확인할 수 있습니다.</p></div>
+  <div class="reference-intro"><h2>참고 자료</h2></div>
   <div class="reference-details">
    <details class="panel" id="reference-panel"><summary>등록 장비 사양·사진</summary><label for="model-picker">등록 모델</label><select id="model-picker"></select><div id="model-details"></div></details>
    <details class="panel" id="criteria"><summary>판정 기준과 데이터 관리</summary>
@@ -49,5 +51,5 @@
  </section>
  <div class="notice"><span class="notice-mark" aria-hidden="true">i</span><p><strong>수치 비교는 후보 선정의 시작입니다.</strong> 최종 제안 전에는 최신 공식 사양과 기능·라이선스·시험조건을 확인하세요.</p></div>
 </main>
-<footer><span class="footer-brand">F5 / RFQ</span><span>요구 수치에서, 검토 가능한 후보까지.</span><span>고객정보·인증정보는 입력하지 마세요.</span></footer>
+<footer><span class="footer-brand">F5 / RFQ</span><span>고객정보·인증정보는 입력하지 마세요.</span></footer>
 </body></html>

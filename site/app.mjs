@@ -27,6 +27,11 @@ function renderReview(requirements,editable=false){
  }
  detail.append(list);return detail;
 }
+function labelNarrowCell(cell, text){
+ const label=el('span',text,'cell-label');
+ label.setAttribute('aria-hidden','true');
+ cell.prepend(label);
+}
 function renderDraft(){
  const host=$('draft-groups');host.replaceChildren();let count=0,reviewCount=0;
  for(const group of state.groups){
@@ -41,6 +46,7 @@ function renderDraft(){
    const opInput=fieldSelect(['>=','<=','>','<','='].map(x=>[x,x]),r.operator,v=>{r.operator=v;r.userEdited=true;});opInput.disabled=r.kind!=='numeric';opInput.setAttribute('aria-label',r.label+' 비교 조건');op.append(opInput);
    if(r.kind==='numeric'){const num=el('input');num.type='number';num.step='any';num.min='0';num.value=r.value??'';num.setAttribute('aria-label',r.label+' 요구값');num.addEventListener('input',()=>{r.value=num.valueAsNumber;r.userEdited=true;invalidateResults();});value.append(num);}else value.textContent=r.kind==='boolean'?'필수':'확인 필요';
    const detail=el('details'),sum=el('summary','원문 보기');detail.append(sum,el('pre',r.source));if(r.note)detail.append(el('small',r.note));src.append(detail);
+   labelNarrowCell(op,'조건');labelNarrowCell(value,'요구값');labelNarrowCell(unit,'단위');
    tr.append(name,op,value,unit,src);table.append(tr);
   }
   if(comparison.length){const scroll=el('div',undefined,'scroll');scroll.append(table);host.append(scroll);}else host.append(el('p','비교할 수치가 없습니다. 별도 검토에서 항목을 지정하거나 요구 수치를 입력하세요.','hint'));
@@ -54,7 +60,10 @@ function renderChecks(ev){
  for(const c of ev.checks){const tr=el('tr'),status=el('td'),note=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note'));
   const detail=el('details');detail.append(el('summary',c.conditionPending?'시험조건 확인':'근거 보기'),el('small',c.evidenceNote??''));if(c.reason)detail.append(el('p',c.reason));
   if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}note.append(detail);
-  tr.append(el('td',c.label),el('td',`${c.kind==='numeric'?c.operator??'':''} ${formatNumber(c.value,c.unit)}`),el('td',formatNumber(c.actual,c.unit)),status,note);table.append(tr);
+  const operator=c.kind==='numeric'?({'<=':'≤','>=':'≥'}[c.operator]??c.operator??''):'';
+  const required=el('td',`${operator} ${formatNumber(c.value,c.unit)}`.trim()),actual=el('td',formatNumber(c.actual,c.unit));
+  labelNarrowCell(required,'요구 조건');labelNarrowCell(actual,'등록값');
+  tr.append(el('td',c.label),required,actual,status,note);table.append(tr);
  }
  const wrap=el('div',undefined,'scroll');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',ev.model.model+' 요구값과 등록값 비교표');wrap.append(table);return wrap;
 }
@@ -84,13 +93,13 @@ function compare(){
   const best=evaluations[0];if(!best){card.append(el('p','비교 가능한 등록 모델이 없습니다.'));host.append(card);continue;}
   if(!best.checks.length){card.append(el('p','비교할 수치 요구조건이 없습니다.','summary'));const review=renderReview(best.reviewRequirements);if(review)card.append(review);host.append(card);continue;}
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
-  intro.append(el('p',best.numericCandidate?'NUMERIC MATCH':'NUMERIC REVIEW','eyebrow'),el('p',best.model.model,'candidate-name'),el('p',best.numericCandidate?'등록 수치상 우선 검토 후보':'수치 조건을 더 확인해야 하는 모델','summary'));overview.append(intro);
+  intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
   const stats=el('div',undefined,'result-stats');
   for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['수치 확인',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
   card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
   const conditionCount=best.checks.filter(c=>c.conditionPending&&c.status!=='unknown').length;
   if(conditionCount)card.append(el('p',`시험조건이 미지정된 ${conditionCount}개 항목은 수치만 우선 비교했습니다. 해당 행에 별도로 표시했습니다.`,'hint'));
-  card.append(el('h4','요구 수치와 등록값'),el('p','표를 좌우로 밀어 요구값·등록값·판정을 확인하세요.','table-hint'),renderChecks(best));
+  card.append(el('h4','요구 수치와 등록값'),renderChecks(best));
   const review=renderReview(best.reviewRequirements);if(review)card.append(review);
   const allModels=el('details',undefined,'model-comparison');allModels.append(el('summary',`전체 모델 ${evaluations.length}개 비교`));
   const table=el('table'),head=el('tr');for(const title of ['모델','구분','수치상 충족','미충족','수치 확인'])head.append(el('th',title));table.append(head);
