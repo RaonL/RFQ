@@ -99,19 +99,26 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; color: var(
 .review-list p { white-space: pre-wrap; }
 .review-list small { display: block; }
 .result-card > h3 { margin-bottom: .85rem; }
-.gslb-candidates { margin-bottom: 1.5rem; }
-.gslb-candidates h4 { margin: 0; }
-.gslb-threshold { color: var(--body); margin: .25rem 0 .75rem; font-variant-numeric: tabular-nums; }
-.gslb-list { list-style: none; margin: 0; padding: 0; }
-.gslb-list li { display: grid; grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr); align-items: baseline; gap: .5rem; border-top: 1px solid var(--line); padding: .5rem .25rem; }
-.gslb-list small { font-size: .875rem; color: var(--muted); }
-.gslb-list strong + small { display: block; }
-.gslb-value { display: flex; align-items: baseline; justify-content: end; gap: .1rem .65rem; flex-wrap: wrap; text-align: right; font-variant-numeric: tabular-nums; }
-.gslb-candidates > details { border-top: 1px solid var(--line); margin-top: .25rem; }
+.service-candidates { margin-bottom: 1.5rem; }
+.service-candidates h4 { margin: 0; }
+.service-threshold { color: var(--body); margin: .25rem 0 .75rem; font-variant-numeric: tabular-nums; }
+.service-threshold small { display: block; color: var(--muted); font-size: .875rem; }
+.service-values { display: grid; gap: .3rem; min-width: 0; }
+.service-values span { font-weight: 600; }
+.alternate-service { margin: -.5rem 0 1rem; }
+.alternate-service > .service-candidates { margin-top: 1rem; }
+.service-list { list-style: none; margin: 0; padding: 0; }
+.service-list li { display: grid; grid-template-columns: minmax(6rem, 1fr) minmax(0, 2fr); align-items: baseline; gap: .5rem; border-top: 1px solid var(--line); padding: .5rem .25rem; }
+.service-list small { font-size: .875rem; color: var(--muted); }
+.service-list strong + small { display: block; }
+.service-value { display: flex; align-items: baseline; justify-content: end; gap: .1rem .65rem; flex-wrap: wrap; text-align: right; font-variant-numeric: tabular-nums; }
+.service-candidates > details { border-top: 1px solid var(--line); margin-top: .25rem; }
 @media (min-width: 56rem) {
-  .gslb-candidates { display: grid; grid-template-columns: minmax(13rem, 1fr) minmax(21rem, 2fr); gap: 0 2rem; }
-  .gslb-heading { grid-row: span 2; border-left: 3px solid var(--primary); padding-left: 1rem; align-self: start; }
-  .gslb-candidates > details { grid-column: 2; }
+  .service-value { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(10rem, 1fr); align-items: baseline; }
+  .service-value small { text-align: left; }
+  .service-candidates { display: grid; grid-template-columns: minmax(13rem, 1fr) minmax(21rem, 2fr); gap: 0 2rem; }
+  .service-heading { grid-row: span 2; border-left: 3px solid var(--primary); padding-left: 1rem; align-self: start; }
+  .service-candidates > details { grid-column: 2; }
 }
 .candidate-overview { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; padding: 1.25rem 1.5rem; border-radius: .75rem; background: #f0f5ff; }
 .candidate-name { font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 650; line-height: 1.25; margin-top: .25rem; }
@@ -154,6 +161,7 @@ footer { border-top: 1px solid var(--line); justify-content: space-between; }
   .numeric-table details[open] { max-width: none; }
 }
 @media (max-width: 44rem) {
+  .service-values:has(.service-value + .service-value) .service-value { display: grid; gap: 0; justify-items: end; }
   main { width: calc(100% - 1.5rem); }
   .site-header { gap: .75rem; padding: .35rem .75rem; flex-wrap: wrap; }
   nav { gap: .7rem; }

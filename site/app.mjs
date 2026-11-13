@@ -103,35 +103,62 @@ function competitorTable(modelName){
  const products=[c.f5_model,...(c.competitors??[])],table=el('table'),head=el('tr');head.append(el('th','항목'));for(const name of products)head.append(el('th',name));table.append(head);
  for(const r of c.rows??[]){const row=el('tr');row.append(el('td',r.metric));for(const name of products)row.append(el('td',String(r.values?.[name]??'-')));table.append(row);}const scroll=el('div',undefined,'scroll');scroll.append(table);detail.append(scroll);return detail;
 }
-function renderGslbCandidates(evaluations){
- const rows=evaluations.map(e=>({evaluation:e,checks:e.checks.filter(c=>c.comparisonBasis)}));
+function isSslo(check){return check.key==='sslo_gbps'||check.key==='sslo_tps';}
+function serviceBasis(check){
+ if(!isSslo(check))return check.comparisonBasis;
+ const parts=[SSLO_PROFILES[check.profile]??'구성 미지정'];
+ if(check.key==='sslo_tps')parts.push(SSLO_DIRECTIONS[check.direction]??'방향 미지정');
+ return parts.join(' · ');
+}
+function renderServiceCandidates(evaluations,sslo){
+ const rows=evaluations.map(e=>({evaluation:e,checks:e.checks.filter(c=>sslo?isSslo(c):c.comparisonBasis)}));
  const criteria=rows[0].checks;
  if(!criteria.length)return null;
  const matches=[],others=[];
  for(const row of rows)(row.checks.every(c=>c.status==='pass')?matches:others).push(row);
- const section=el('section',undefined,'gslb-candidates');
- const heading=el('div',undefined,'gslb-heading');
- heading.append(el('h4',`요구 RPS 충족 장비 · ${matches.length}개`));
+ const section=el('section',undefined,'service-candidates');
+ const heading=el('div',undefined,'service-heading');
+ const title=sslo?'SSLO 요구 수치 충족 장비':'요구 RPS 충족 장비';
+ heading.append(el('h4',`${title} · ${matches.length}개`));
  const operators={'>=':'이상','<=':'이하','>':'초과','<':'미만','=':'동일'};
- heading.append(el('p',criteria.map(c=>`${formatNumber(c.value,'RPS')} ${operators[c.operator]??''}`).join(' · '),'gslb-threshold'));
+ for(const c of criteria){
+  const threshold=el('p',`${formatNumber(c.value,c.unit)} ${operators[c.operator]??''}`,'service-threshold');
+  if(sslo)threshold.append(el('small',serviceBasis(c)));
+  heading.append(threshold);
+ }
  section.append(heading);
  function modelList(items){
-  const list=el('ul',undefined,'gslb-list');
+  const list=el('ul',undefined,'service-list');
   for(const {evaluation,checks} of items){
    const entry=el('li'),model=el('div');
    model.append(el('strong',evaluation.model.model));
    if(evaluation.checks.length>checks.length)model.append(el('small',evaluation.numericCandidate?'전체 수치 충족':'다른 요구조건 검토'));
-   const value=el('div',formatNumber(checks[0].actual,'RPS'),'gslb-value');
-   if(checks[0].actual!==null)value.append(el('small',checks[0].comparisonBasis));
-   entry.append(model,value);list.append(entry);
+   const values=el('div',undefined,'service-values');
+   // Each service configuration can have its own benchmark; repeated bounds share one value.
+   const shown=new Set();
+   for(const check of checks){
+    const basis=serviceBasis(check),key=check.key+'|'+basis;
+    if(shown.has(key))continue;
+    shown.add(key);
+    const value=el('div',undefined,'service-value');
+    value.append(el('span',check.actual==null&&sslo?check.unit+' 자료 없음':formatNumber(check.actual,check.unit)));
+    if(check.actual!=null||sslo)value.append(el('small',basis));
+    values.append(value);
+   }
+   entry.append(model,values);list.append(entry);
   }
   return list;
  }
  if(matches.length)section.append(modelList(matches));
+ else if(sslo&&criteria.some(c=>c.conditionPending)){
+  const notice=el('p','서비스 구성과 TPS 방향을 지정하면 후보를 비교할 수 있습니다. ');
+  const edit=el('a','추출값 수정');edit.href='#draft';
+  notice.append(edit);section.append(notice);
+ }
  else section.append(el('p','등록된 표에서 이 요구 조건을 충족하는 장비가 없습니다.'));
  if(others.length){
   const details=el('details');
-  details.append(el('summary',`미충족·자료 미등록 장비 ${others.length}개`),modelList(others));section.append(details);
+  details.append(el('summary',`${sslo?'그 외 비교 장비':'미충족·자료 미등록 장비'} ${others.length}개`),modelList(others));section.append(details);
  }
  return section;
 }
@@ -144,15 +171,24 @@ function compare(){
   const evaluations=rankModels(catalogue.models,group.requirements);state.evaluations.push({group,evaluations});
   const best=evaluations[0];if(!best){card.append(el('p','비교 가능한 등록 모델이 없습니다.'));host.append(card);continue;}
   if(!best.checks.length){card.append(el('p','비교할 수치 요구조건이 없습니다.','summary'));const review=renderReview(best.reviewRequirements);if(review)card.append(review);host.append(card);continue;}
-  const gslbList=renderGslbCandidates(evaluations);if(gslbList)card.append(gslbList);
+  const ssloList=renderServiceCandidates(evaluations,true);
+  const gslbList=renderServiceCandidates(evaluations,false);
+  if(ssloList)card.append(ssloList);
+  if(ssloList&&gslbList){
+   const extra=el('details',undefined,'alternate-service');
+   extra.append(el('summary','GSLB 요구 RPS별 장비 보기'),gslbList);card.append(extra);
+  }else if(gslbList)card.append(gslbList);
+  const compact=ssloList&&best.numericCandidate&&best.checks.every(isSslo);
+  const breakdown=compact?el('details',undefined,'model-comparison'):card;
+  if(compact){breakdown.append(el('summary',best.model.model+' · 항목별 판정과 근거'));card.append(breakdown);}
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
   intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':best.failed?'요구 수치 미충족 모델':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
   const stats=el('div',undefined,'result-stats');
-  for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['수치 확인',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
-  card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
+  for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['수치 확인',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);breakdown.append(overview);
+  breakdown.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
   const conditionCount=best.checks.filter(c=>c.conditionPending&&c.status!=='unknown').length;
   if(conditionCount)card.append(el('p',`시험조건이 미지정된 ${conditionCount}개 항목은 수치만 우선 비교했습니다. 해당 행에 별도로 표시했습니다.`,'hint'));
-  card.append(el('h4','요구 수치와 등록값'),renderChecks(best));
+  breakdown.append(el('h4','요구 수치와 등록값'),renderChecks(best));
   const review=renderReview(best.reviewRequirements);if(review)card.append(review);
   const allModels=el('details',undefined,'model-comparison');allModels.append(el('summary',`전체 모델 ${evaluations.length}개 비교`));
   const table=el('table'),head=el('tr');for(const title of ['모델','구분','수치상 충족','미충족','수치 확인'])head.append(el('th',title));table.append(head);
