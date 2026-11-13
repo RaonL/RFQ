@@ -66,7 +66,7 @@ export function evaluateModel(model,requirements){
  const {comparison,review:reviewRequirements}=splitRequirements(requirements);
  const checks=comparison.map(r=>{
   let actual=model.metrics[r.key]??null,status='unknown',reason=r.note??'',conditionPending=false;
-  let serviceSource='',serviceNote='',referenceValue=null,label=r.label;
+  let serviceSource='',serviceNote='',comparisonBasis='',label=r.label;
   if(r.key==='sslo_gbps'||r.key==='sslo_tps'){
    const profile=SSLO_PROFILES[r.profile],direction=SSLO_DIRECTIONS[r.direction],isTps=r.key==='sslo_tps';
    const row=model.servicePerformance?.sslo?.[r.profile];
@@ -77,13 +77,11 @@ export function evaluateModel(model,requirements){
   }
   const gslb=r.key==='gslb_rps'||(r.key==='dns_qps'&&r.context==='gslb');
   if(gslb){
-   actual=model.metrics.gslb_rps??null;label='GSLB Query RPS';
-   if(actual===null){
-    referenceValue=model.metrics.dns_qps??null;conditionPending=true;
-    reason+=' GSLB 부하분산 응답 성능은 별도 시험값이 필요합니다.';
-   }
+   actual=model.servicePerformance?.dns_qps??null;
+   label='GSLB 요구 RPS';comparisonBasis='DNS Express 기준';
+   reason+=' 첨부 표의 권한 DNS 최대 Query RPS로 비교합니다. 실제 GSLB 부하분산 성능은 별도 시험 대상입니다.';
   }
-  if((r.key==='dns_qps'&&!gslb&&actual!==null)||referenceValue!==null){serviceSource=DNS+'#page=18';serviceNote=DNS_CONDITIONS;}
+  if((r.key==='dns_qps'||gslb)&&actual!==null){serviceSource=DNS+'#page=18';serviceNote=DNS_CONDITIONS;}
   const valid=typeof r.value==='number'&&Number.isFinite(r.value)&&r.value>=0&&r.value<=Number.MAX_SAFE_INTEGER&&['>=','<=','>','<','='].includes(r.operator);
   const integerRequired=/ports$/.test(r.key)||['cpu_cores','tenant_vcpus','concurrent_connections','arp_table'].includes(r.key);
   if(r.kind==='numeric'&&valid&&(!integerRequired||Number.isInteger(r.value))&&actual!==null)status=compare(actual,r.value,r.operator)?'pass':'fail';
@@ -103,7 +101,7 @@ export function evaluateModel(model,requirements){
   if(actual===null)reason+=' 등록된 수치/지원 근거가 없습니다.';
   const e=model.evidence[r.key];const evidenceVerified=e?.verified===true&&/^https:\/\//.test(e.url??'')&&/^\d{4}-\d{2}-\d{2}$/.test(e.checked_at??'')&&Boolean(e.conditions);
   let source=e?.url??((model.model.toLowerCase()==='f5 r2600'&&r.key in LEGACY_R2600)?(r.key==='dns_qps'?DNS:RSERIES):'');
-  return {...r,label,actual,status,reason,conditionPending,referenceValue,evidenceVerified:evidenceVerified&&!conditionPending,sourceUrl:serviceSource||source,evidenceNote:serviceNote||(evidenceVerified&&!conditionPending?`등록된 검증 기록: ${e.checked_at}`:'등록값 기준 · 공식 사양 확인 필요')};
+  return {...r,label,actual,status,reason,conditionPending,comparisonBasis,evidenceVerified:evidenceVerified&&!conditionPending&&!gslb,sourceUrl:serviceSource||source,evidenceNote:serviceNote||(evidenceVerified&&!conditionPending?`등록된 검증 기록: ${e.checked_at}`:'등록값 기준 · 공식 사양 확인 필요')};
  });
  const ports=checks.filter(c=>PORT_SPEEDS[c.key]!==undefined);
  if(ports.length&&ports.every(c=>c.status==='pass')&&!physicalFit(model.pools,requirements))checks.push({key:'physical_ports',label:'물리 포트 동시 할당',actual:null,value:null,unit:'',source:'속도별 요구 포트 동시 확보',status:'fail',reason:'동일 물리 포트를 중복 사용해야 하는 요구입니다. 자동 브레이크아웃은 가정하지 않습니다.',evidenceVerified:false,evidenceNote:'등록 포트 구성 기준'});
@@ -116,15 +114,18 @@ export function rankModels(models,requirements){
  const results=models.map(m=>evaluateModel(m,requirements));
  // For an SSLO sizing request, show measured shortfalls before models with no benchmark.
  const missingSslo=e=>e.checks.filter(c=>(c.key==='sslo_gbps'||c.key==='sslo_tps')&&c.actual==null).length;
- // On tied assessments prefer a model meeting the DNS reference value for GSLB review.
- const referenceMatches=e=>e.checks.filter(c=>c.referenceValue!=null&&compare(c.referenceValue,c.value,c.operator)).length;
- return results.sort((a,b)=>Number(b.numericCandidate)-Number(a.numericCandidate)||missingSslo(a)-missingSslo(b)||a.failed-b.failed||a.unknown-b.unknown||a.shortfall-b.shortfall||referenceMatches(b)-referenceMatches(a)||a.model.tier-b.model.tier||a.model.model.localeCompare(b.model.model));
+ const gslbOrder=e=>{
+  const rows=e.checks.filter(c=>c.comparisonBasis);
+  if(rows.some(c=>c.status==='unknown'))return 2;
+  return rows.some(c=>c.status==='fail')?1:0;
+ };
+ return results.sort((a,b)=>Number(b.numericCandidate)-Number(a.numericCandidate)||gslbOrder(a)-gslbOrder(b)||missingSslo(a)-missingSslo(b)||a.failed-b.failed||a.unknown-b.unknown||a.shortfall-b.shortfall||a.model.tier-b.model.tier||a.model.model.localeCompare(b.model.model));
 }
 export function formatNumber(value,unit='') {return value===null||value===undefined?'자료 없음':typeof value==='boolean'?'필수':`${new Intl.NumberFormat('ko-KR',{maximumFractionDigits:8}).format(value)} ${unit}`.trim();}
 export function reportText(group,evaluation){
  const title=evaluation.numericCandidate?'등록 수치상 검토 후보':'추가 검토 대상 (충족 추천 아님)';
  return [`[RFQ 검토] ${group.name}`,`${title}: ${evaluation.model.model}`,'이 결과는 등록 자료와의 비교이며, 최신 공식 사양·라이선스·구성 확인 전 최종 제안을 확정하지 않습니다.',
  `수치 ${evaluation.checks.length}개: 충족 ${evaluation.passed} / 미충족 ${evaluation.failed} / 수치 확인 ${evaluation.unknown}`,
- ...evaluation.checks.map(c=>`- ${c.label}: ${c.status==='pass'?'수치상 충족':c.status==='fail'?'미충족':'수치 확인 필요'} | 요구 ${c.operator??''} ${formatNumber(c.value,c.unit)} | 등록 ${formatNumber(c.actual,c.unit)}${c.referenceValue!=null?' | DNS Express 참고 '+formatNumber(c.referenceValue,'RPS'):''}${c.conditionPending?' | 시험조건 확인 필요':''}`),
+ ...evaluation.checks.map(c=>`- ${c.label}: ${c.status==='pass'?'수치상 충족':c.status==='fail'?'미충족':'수치 확인 필요'} | 요구 ${c.operator??''} ${formatNumber(c.value,c.unit)} | 등록 ${formatNumber(c.actual,c.unit)}${c.comparisonBasis?' ('+c.comparisonBasis+')':''}${c.conditionPending?' | 시험조건 확인 필요':''}`),
  ...(evaluation.reviewRequirements.length?['별도 기능·문구 검토 (수치 집계에서 제외):',...evaluation.reviewRequirements.map(r=>`- ${r.label}: ${r.source}`)]:[])].join('\n');
 }

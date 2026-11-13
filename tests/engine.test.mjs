@@ -45,7 +45,7 @@ test('negative amount is rejected',()=>assert.equal(evaluateModel(model(),parseR
 test('unregistered fields are null not zero',()=>assert.equal(normalizeModel({model:'X',specs:{}}).metrics.l4_cps,null));
 test('shared physical ports cannot be double counted',()=>assert.ok(evaluateModel(model(),parseRequirements('25G SFP28 4Port 이상\n10G SFP+ 4Port 이상')).checks.some(r=>r.key==='physical_ports'&&r.status==='fail')));
 test('optical and copper pools are independent',()=>assert.equal(evaluateModel(model(),parseRequirements('25G SFP28 4Port 이상\n10G Copper 4Port 이상')).numericCandidate,true));
-test('explicit GSLB cannot use DNS Express performance',()=>assert.ok(evaluateModel(model(),parseRequirements('DNS GSLB QPS 300000 이상')).checks.some(r=>r.status==='unknown')));
+test('a model without a supplied GSLB comparison row stays unknown',()=>assert.ok(evaluateModel(model(),parseRequirements('DNS GSLB QPS 300000 이상')).checks.some(r=>r.status==='unknown')));
 test('CPU physical and tenant are not conflated',()=>assert.ok(evaluateModel(model(),parseRequirements('CPU 4Core 이상')).checks.some(r=>r.status==='unknown')));
 test('product column is not a requirement',()=>assert.equal(value('Storage\n요구규격: 1TB 이상\n제품사양: 480GB M.2 SSD\n검토결과: 미충족','ssd_gb'),1000));
 test('features remain separate and cannot become full approval',()=>{const r=evaluateModel(model(),parseRequirements('전원/FAN 이중화'));assert.equal(r.checks.length,0);assert.ok(r.reviewRequirements.some(r=>r.kind==='boolean'));assert.equal(r.allPassed,false);});

@@ -18,14 +18,21 @@ test('published DNS rates match all ten supplied rows and are attributed to DNS 
  assert.equal(best.checks[0].conditionPending,false);
 });
 
-test('explicit GSLB queries show a labelled reference and can never pass on DNS Express alone',()=>{
+test('GSLB ranks all passing table entries first, with an explicit DNS Express basis',()=>{
  for(const input of ['GSLB 110만 QPS 이상','[GSLB]\nMax Query RPS 1.1M 이상','GSLB RPS\n1100000']){
   const g=group(input),best=rankModels(models,g.requirements)[0];
-  assert.equal(best.model.model,'F5 r2800');assert.equal(best.checks.length,1);assert.equal(best.unknown,1);
-  assert.equal(best.checks[0].actual,null);assert.equal(best.checks[0].referenceValue,1100000);
-  assert.match(reportText(g,best),/DNS Express 참고 1,100,000 RPS/);
+  assert.equal(best.model.model,'F5 r2800');assert.equal(best.checks.length,1);assert.equal(best.passed,1);
+  assert.equal(best.checks[0].actual,1100000);assert.equal(best.allPassed,false);
+  assert.match(reportText(g,best),/1,100,000 RPS \(DNS Express 기준\)/);
+  const results=rankModels(models,g.requirements);
+  assert.equal(results.slice(0,9).every(e=>e.numericCandidate),true);
+  assert.equal(results[9].failed,1);assert.ok(results.slice(10).every(e=>e.unknown===1));
  }
- assert.equal(evaluate('r12600-DS','GSLB QPS 1000000').checks[0].referenceValue,null);
+ assert.equal(evaluate('r12600-DS','GSLB QPS 1000000').checks[0].actual,null);
+ assert.equal(evaluate('r2800','GSLB RPS 110만 초과').failed,1);
+ assert.equal(evaluate('r2800','GSLB RPS 110만 이하').passed,1);
+ const aboveMax=rankModels(models,group('GSLB RPS 700만 이상').requirements);
+ assert.equal(aboveMax.some(e=>e.numericCandidate),false);assert.equal(aboveMax[0].model.model,'F5 r10900');
 });
 
 test('published SSLO records select the service chain, units and TPS direction independently',()=>{
@@ -52,5 +59,5 @@ test('missing topology, directions and unpublished models cannot inherit generic
   const e=evaluate(model,input);assert.equal(e.unknown,1);assert.equal(e.checks[0].actual,null);
  }
  const mixed=evaluate('r2800','GSLB QPS 1M SSLO L3 inline throughput 4Gbps');
- assert.equal(mixed.checks.length,2);assert.equal(mixed.passed,1);assert.equal(mixed.unknown,1);
+ assert.equal(mixed.checks.length,2);assert.equal(mixed.passed,2);assert.equal(mixed.unknown,0);
 });

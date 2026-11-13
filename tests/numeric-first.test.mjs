@@ -50,7 +50,7 @@ test('a distinct CPS metric after a bare throughput value is preserved',()=>{
  assert.equal(requirements.find(r=>r.key==='l4_gbps')?.value,20);
  assert.equal(requirements.find(r=>r.key==='l4_cps')?.value,170000);
 });
-test('an explicit GSLB group cannot use DNS Express numbers',()=>{
+test('GSLB does not fall back to legacy values when the supplied table is absent',()=>{
  const group=parseGroups('[DNS GSLB]\nMaximum Query RPS 300000 이상')[0];
  assert.equal(evaluateModel(r2600,group.requirements).numericCandidate,false);
 });
