@@ -68,6 +68,16 @@ with sync_playwright() as p:
   card.get_by_role('button',name='전체 보기',exact=True).click()
   assert rows.count()==3
   checks.append('mobile status buttons filter and restore the comparison rows')
+  page.fill('#requirements','SSL TPS (RSA 4096) 7000 이상');page.click('#parse');page.click('#compare')
+  card.locator('button.result-stat.unknown').click()
+  editor=card.locator('.inline-editor');editor.locator('summary').click()
+  editor.get_by_label('시험 기준',exact=True).select_option('rsa2048')
+  editor.get_by_label('요구값 (TPS)',exact=True).fill('10000')
+  editor.get_by_role('button',name='수정하고 다시 비교').click()
+  outcome=card.locator('.inline-outcome')
+  assert 'F5 r2600 → F5 r2800' in outcome.inner_text() and 'RSA 2048' in outcome.inner_text()
+  assert outcome.evaluate('n=>n===document.activeElement') and page.locator('#requirements').input_value()=='SSL TPS (RSA 4096) 7000 이상'
+  checks.append('inline basis and value edits rerank candidates and focus the local result')
   assert not errors,errors;assert not [r for r in requests if r[0]!='GET'],requests;assert not [r for r in requests if not r[1].startswith('http://127.0.0.1:8765')],requests;checks.append('offline DOM harness: no page errors')
   browser.close()
 (ART/'browser-results.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'scope':'Offline DOM harness with fixture data, fetch replaced for local data only; network navigation prohibited; CSP/ESM/CDN/PDF/XLSX not exercised'},ensure_ascii=False,indent=2))

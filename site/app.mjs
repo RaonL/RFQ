@@ -8,8 +8,8 @@ function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefine
 function message(text){$('messages').textContent=text;}
 function invalidateResults(){state.evaluations=[];$('results').hidden=true;refreshQuestions();}
 function invalidateDraft(){state.fileGeneration++;state.groups=[];$('draft').hidden=true;invalidateResults();}
-function fieldSelect(options,value,fn){const s=el('select');for(const [key,label] of options){const opt=el('option',label);opt.value=key;s.append(opt);}s.value=value;s.addEventListener('change',()=>{fn(s.value);invalidateResults();});return s;}
-function contextEditor(r){
+function fieldSelect(options,value,fn,afterChange=invalidateResults){const s=el('select');for(const [key,label] of options){const opt=el('option',label);opt.value=key;s.append(opt);}s.value=value;s.addEventListener('change',()=>{fn(s.value);afterChange();});return s;}
+function contextEditor(r,onChange=invalidateResults,redraw=renderDraft){
  if(r.ambiguity||r.originalAmbiguity){
   const type=r.originalAmbiguity??r.ambiguity,choices=interpretations[type];
   const selected=r.deferred?'unknown':r.ambiguity?'':r.key;
@@ -20,13 +20,13 @@ function contextEditor(r){
     r.ambiguity=type;r.deferred=v==='unknown';r.key=type==='ssl'?'ssl_tps':'generic_gbps';
     Object.assign(r,LABELS[r.key]);if(type==='ssl')r.label='SSL TPS';r.algorithm='unspecified';
    }
-   r.originalAmbiguity=type;r.userEdited=true;renderDraft();
-  });
+   r.originalAmbiguity=type;r.userEdited=true;redraw();
+  },onChange);
  }
- if(r.key==='ssl_tps')return fieldSelect([['unspecified','RSA 기준 확인 필요'],['rsa2048','RSA 2048'],['rsa4096','RSA 4096']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
- if(r.key==='ecdsa_tps')return fieldSelect([['unspecified','곡선 미지정 · 수치 우선 비교'],['ecdsa_p256','ECDSA P-256'],['ecdsa_p384','ECDSA P-384']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
- if(r.key==='cpu_cores')return fieldSelect([['unspecified','코어 기준 확인 필요'],['physical','물리 코어']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;});
- if(r.key==='dns_qps')return fieldSelect([['unspecified','DNS 기준 미지정 · 수치 우선 비교'],['dns_express','DNS Express 권한 DNS'],['gslb','GSLB']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;});
+ if(r.key==='ssl_tps')return fieldSelect([['unspecified','RSA 기준 확인 필요'],['rsa2048','RSA 2048'],['rsa4096','RSA 4096']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;},onChange);
+ if(r.key==='ecdsa_tps')return fieldSelect([['unspecified','곡선 미지정 · 수치 우선 비교'],['ecdsa_p256','ECDSA P-256'],['ecdsa_p384','ECDSA P-384']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;},onChange);
+ if(r.key==='cpu_cores')return fieldSelect([['unspecified','코어 기준 확인 필요'],['physical','물리 코어']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;},onChange);
+ if(r.key==='dns_qps')return fieldSelect([['unspecified','DNS 기준 미지정 · 수치 우선 비교'],['dns_express','DNS Express 권한 DNS'],['gslb','GSLB']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;},onChange);
  return null;
 }
 function renderReview(requirements,editable=false){
@@ -147,7 +147,95 @@ function candidateDifference(group,evaluations){
  }
  return section.childElementCount>1?section:null;
 }
-function renderChecks(ev){
+function inlineEditor(group,requirement){
+ const editor=el('details',undefined,'inline-editor');
+ editor.append(el('summary','조건 수정'));
+ editor.addEventListener('toggle',()=>{
+  if(!editor.open)return;
+  const draft={...requirement};
+  const form=el('form'),basis=el('div'),questions=el('div');
+  function field(text,control){
+   if(text)control.setAttribute('aria-label',text);
+   const label=el('label',text);label.append(control);return label;
+  }
+  const noop=()=>{};
+  function showBasis(){
+   basis.replaceChildren();
+   const select=contextEditor(draft,noop,noop);
+   if(select)basis.append(field('시험 기준',select));
+  }
+  const number=el('input');number.type='number';number.required=true;number.min='0';number.max=String(Number.MAX_SAFE_INTEGER);
+  number.value=Number.isFinite(draft.value)?String(draft.value):'';
+  const amount=field('',number);
+  function showUnit(){
+   number.step=/ports$/.test(draft.key)||['cpu_cores','tenant_vcpus','concurrent_connections','arp_table'].includes(draft.key)?'1':'any';
+   amount.replaceChildren('요구값'+(draft.unit?' ('+draft.unit+')':''),number);
+  }
+  if(!LABELS[draft.key]||draft.kind!=='numeric'){
+   const metric=fieldSelect([['','항목 선택'],...Object.entries(LABELS).map(([k,d])=>[k,d.label])],'',key=>{
+    Object.assign(draft,LABELS[key],{key,kind:'numeric',note:'',algorithm:'unspecified',context:'unspecified'});
+    showBasis();showUnit();
+   },noop);
+   metric.required=true;form.append(field('해석 항목',metric));
+  }
+  showBasis();showUnit();
+  const op=fieldSelect([['>=','이상'],['>','초과'],['<=','이하'],['<','미만'],['=','같음']],draft.operator,v=>{draft.operator=v;},noop);
+  op.required=true;
+  const submit=el('button','수정하고 다시 비교');submit.type='submit';
+  form.append(basis,field('비교 조건',op),amount,questions,submit);
+  // A changed threshold can make another previously immaterial ambiguity relevant.
+  const edits=new Map([[requirement,draft]]);
+  form.addEventListener('submit',event=>{
+   event.preventDefault();draft.value=number.valueAsNumber;
+   const models=normalizeCatalogue(state.reference,$('include-excluded').checked).models;
+   const proposed=group.requirements.map(r=>edits.get(r)??r);
+   const needed=materialQuestions(models,proposed);
+   if(needed.size){
+    questions.replaceChildren(el('p','후보가 달라지는 시험 기준을 선택하세요.'));
+    for(const pending of needed){
+     const original=group.requirements[proposed.indexOf(pending)];
+     const copy=edits.get(original)??{...original};edits.set(original,copy);
+     if(original===requirement){basis.querySelector('select')?.focus();continue;}
+     questions.append(field(original.source,contextEditor(copy,noop,noop)));
+    }
+    questions.querySelector('select')?.focus();return;
+   }
+   for(const [original,copy] of edits)Object.assign(original,copy,{userEdited:true});
+   const entry=state.evaluations.find(item=>item.group===group);
+   const previous=entry.evaluations[0].model.model;
+   entry.evaluations=rankModels(models,group.requirements);
+   const oldCard=editor.closest('.result-card');
+   const filter=oldCard.querySelector('.result-stat[aria-pressed=true]')?.dataset.status;
+   renderDraft();
+   const card=renderGroupResult(group,entry.evaluations,{requirement,previous,filter});
+   oldCard.replaceWith(card);
+   const feedback=card.querySelector('.inline-outcome');
+   feedback.focus({preventScroll:true});feedback.scrollIntoView({block:'nearest'});
+  });
+  editor.querySelector('form')?.remove();editor.append(form);
+ });
+ return editor;
+}
+function inlineOutcome(best,{requirement,previous}){
+ const box=el('section',undefined,'inline-outcome');box.tabIndex=-1;
+ box.setAttribute('aria-label','다시 비교한 결과');
+ const check=best.checks.find(c=>c.id===requirement.id);
+ const name=best.model.model;
+ box.append(el('h4','다시 비교한 결과'),el('strong',best.checks.length?(previous===name?'검토 모델 유지 · '+name:previous+' → '+name):'비교할 수치 없음'));
+ box.append(el('p',requirement.source,'source-clause'));
+ if(check){
+  const figures=el('dl',undefined,'inline-figures');
+  const context=contextEditor(requirement,()=>{},()=>{});
+  const appliedBasis=context?.selectedOptions[0]?.textContent;
+  differenceFigure(figures,'수정한 요구값',requiredValue(check),appliedBasis||check.label);
+  differenceFigure(figures,'장비 등록값',registeredValue(check),registrationBasis(check));
+  box.append(figures,badge(check.status));
+  if(check.explanation)box.append(el('p',check.explanation));
+ }else box.append(el('p','별도 검토로 이동한 항목입니다.'));
+ box.append(el('p',`전체 수치상 충족 ${best.passed} · 미충족 ${best.failed} · 확인 필요 ${best.unknown}`,'hint'));
+ return box;
+}
+function renderChecks(ev,group){
  const table=el('table',undefined,'numeric-table'),head=el('tr');
  for(const title of ['RFQ 원문 / 해석 항목','요구값','장비 등록값','판정 / 근거']){
   const th=el('th',title);th.scope='col';head.append(th);
@@ -165,6 +253,10 @@ function renderChecks(ev){
   labelNarrowCell(required,'요구값');labelNarrowCell(actual,'장비 등록값');
   const source=el('td',undefined,'requirement-source');
   source.append(el('span',c.source,'source-clause'),el('small',c.userEdited?`${c.label} · 직접 수정`:c.label));
+  if(group&&c.status==='unknown'){
+   const requirement=group.requirements.find(r=>r.id===c.id);
+   if(requirement)source.append(inlineEditor(group,requirement));
+  }
   status.append(detail);
   tr.append(source,required,actual,status);body.append(tr);
  }
@@ -262,22 +354,18 @@ function renderGslbCandidates(evaluations){
  }
  return section;
 }
-function compare(){
- if($('compare').disabled)return;
- if(!$('results').hidden){$('results-title').focus();$('results').scrollIntoView({block:'start'});return;}
- const catalogue=normalizeCatalogue(state.reference,$('include-excluded').checked),host=$('result-groups');host.replaceChildren();state.evaluations=[];
- for(const group of state.groups){
+function renderGroupResult(group,evaluations,update=null){
   const card=el('section',undefined,'result-card');card.append(el('h3',group.name));
-  if(group.kind==='log'){card.append(el('p','로그서버 조건은 rSeries ADC 후보 추천에서 제외합니다. 보존 기간·수집량·스토리지는 별도 검토하세요.'));host.append(card);continue;}
-  const evaluations=rankModels(catalogue.models,group.requirements);state.evaluations.push({group,evaluations});
-  const best=evaluations[0];if(!best){card.append(el('p','비교 가능한 등록 모델이 없습니다.'));host.append(card);continue;}
-  if(!best.checks.length){card.append(el('p','비교할 수치 요구조건이 없습니다.','summary'));const review=renderReview(best.reviewRequirements);if(review)card.append(review);host.append(card);continue;}
+  if(group.kind==='log'){card.append(el('p','로그서버 조건은 rSeries ADC 후보 추천에서 제외합니다. 보존 기간·수집량·스토리지는 별도 검토하세요.'));return card;}
+
+  const best=evaluations[0];if(!best){card.append(el('p','비교 가능한 등록 모델이 없습니다.'));return card;}
+  if(!best.checks.length){if(update)card.append(inlineOutcome(best,update));card.append(el('p','비교할 수치 요구조건이 없습니다.','summary'));const review=renderReview(best.reviewRequirements);if(review)card.append(review);return card;}
   const difference=candidateDifference(group,evaluations);
   const gslbList=renderGslbCandidates(evaluations);if(gslbList&&!difference)card.append(gslbList);
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
   intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':best.failed?'요구 수치 미충족 모델':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
-  const checks=renderChecks(best);
-  checks.id='result-checks-'+state.evaluations.length;
+  const checks=renderChecks(best,group);
+  checks.id='result-checks-'+state.groups.indexOf(group);
   const {stats,heading}=createCheckFilters(card,best,checks);
   overview.append(stats);card.append(overview);
   if(difference)card.append(difference);
@@ -285,6 +373,11 @@ function compare(){
   card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
   const conditionCount=best.checks.filter(c=>c.conditionPending&&c.status!=='unknown').length;
   if(conditionCount)card.append(el('p',`시험조건이 미지정된 ${conditionCount}개 항목은 수치만 우선 비교했습니다. 해당 행에 별도로 표시했습니다.`,'hint'));
+  if(update){
+   const previousFilter=[...stats.children].find(button=>button.dataset.status===update.filter);
+   if(previousFilter&&!previousFilter.disabled)previousFilter.click();
+   card.append(inlineOutcome(best,update));
+  }
   card.append(heading,checks);
   const review=renderReview(best.reviewRequirements);if(review)card.append(review);
   const allModels=el('details',undefined,'model-comparison');allModels.append(el('summary',`전체 모델 ${evaluations.length}개 비교`));
@@ -295,7 +388,16 @@ function compare(){
   const competition=competitorTable(best.model.model);if(competition)card.append(competition);
   const report=el('textarea');report.className='report';report.readOnly=true;report.value=reportText(group,best);report.setAttribute('aria-label',group.name+' 검토 문구');
   const reportDetail=el('details',undefined,'report-details');reportDetail.append(el('summary','검토 문구 내보내기'));
-  const copy=el('button','검토 문구 복사','subtle');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(report.value);copy.textContent='복사됨';}catch{report.focus();report.select();copy.textContent='선택된 문구를 Ctrl+C로 복사하세요';}});reportDetail.append(copy,report);card.append(reportDetail);host.append(card);
+  const copy=el('button','검토 문구 복사','subtle');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(report.value);copy.textContent='복사됨';}catch{report.focus();report.select();copy.textContent='선택된 문구를 Ctrl+C로 복사하세요';}});reportDetail.append(copy,report);card.append(reportDetail);return card;
+}
+function compare(){
+ if($('compare').disabled)return;
+ if(!$('results').hidden){$('results-title').focus();$('results').scrollIntoView({block:'start'});return;}
+ const catalogue=normalizeCatalogue(state.reference,$('include-excluded').checked),host=$('result-groups');host.replaceChildren();state.evaluations=[];
+ for(const group of state.groups){
+  const evaluations=group.kind==='log'?[]:rankModels(catalogue.models,group.requirements);
+  if(group.kind!=='log')state.evaluations.push({group,evaluations});
+  host.append(renderGroupResult(group,evaluations));
  }
  $('results').hidden=false;$('results-title').focus();$('results').scrollIntoView({block:'start'});
 }

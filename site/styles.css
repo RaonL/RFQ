@@ -102,6 +102,18 @@ td small { display: block; }
 .numeric-table tbody tr > td:first-child { border-inline-start: 4px solid var(--status-mark); padding-inline-start: 12px; }
 .registered-value, .difference-values dd { white-space: pre-line; }
 .condition-note { color: var(--status-ink); font-weight: 600; }
+.inline-editor { margin-top: 8px; }
+.inline-editor summary { min-height: 44px; width: fit-content; font-weight: 600; text-decoration: underline; }
+.inline-editor form { display: grid; gap: 8px; padding: 8px 0; }
+.inline-editor form > div:empty { display: none; }
+.inline-editor select, .inline-editor input { display: block; width: 100%; min-width: 0; font-size: 1rem; }
+.inline-editor button { justify-self: start; }
+.inline-outcome { margin-block: 24px; border-top: var(--rule); padding: 16px 0; scroll-margin-block: 16px; }
+.inline-outcome > strong { display: block; margin-block: 8px; font-size: 1.25rem; }
+.inline-figures { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; max-width: 36rem; margin: 16px 0 8px; }
+.inline-figures dt { font-size: .8125rem; color: var(--meta); }
+.inline-figures dd { margin: 0; font-weight: 700; white-space: pre-line; }
+.inline-figures small { display: block; }
 .verdict-explanation { margin-top: 4px; font-size: .9375rem; line-height: 1.45; font-weight: 600; white-space: pre-line; color: var(--status-ink, var(--ink)); }
 .draft-table th:first-child { width: 33.333%; }
 .draft-table th:nth-child(2) { width: 25%; }
