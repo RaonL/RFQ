@@ -47,8 +47,7 @@ function compare(actual,required,op){
  switch(op){case '>=':return actual>=required;case '<=':return actual<=required;case '>':return actual>required;case '<':return actual<required;case '=':return actual===required;default:return null;}
 }
 /** Small capacitated max-flow: one physical port can satisfy only one demand. */
-function missingPhysicalPorts(pools,requirements){
- const demands=requirements.filter(r=>PORT_SPEEDS[r.key]!==undefined&&['>=','='].includes(r.operator));
+function missingPhysicalPorts(pools,demands){
  if(!demands.length)return 0;
  const n=2+pools.length+demands.length,s=n-2,t=n-1,cap=Array.from({length:n},()=>Array(n).fill(0));let needed=0;
  pools.forEach((p,i)=>{cap[s][i]=p.count;demands.forEach((r,j)=>{if(p.family===poolFamily(r.key)&&p.speeds.includes(PORT_SPEEDS[r.key]))cap[i][pools.length+j]=p.count;});});
@@ -150,8 +149,9 @@ export function evaluateModel(model,requirements){
  });
  const ports=checks.filter(c=>PORT_SPEEDS[c.key]!==undefined);
  if(ports.length&&ports.every(c=>c.status==='pass')){
-  const missing=missingPhysicalPorts(model.pools,requirements);
-  if(missing)checks.push({key:'physical_ports',label:'물리 포트 동시 할당',actual:null,value:null,unit:'',source:'속도별 요구 포트 동시 확보',status:'fail',explanation:`동시에 할당할 물리 포트 ${missing}개 부족`,reason:'동일 물리 포트를 중복 사용해야 하는 요구입니다. 자동 브레이크아웃은 가정하지 않습니다.',evidenceVerified:false,evidenceNote:'등록 포트 구성 기준'});
+  const demands=ports.filter(c=>['>=','='].includes(c.operator));
+  const missing=missingPhysicalPorts(model.pools,demands);
+  if(missing)checks.push({key:'physical_ports',requirementIds:demands.map(c=>c.id),label:'물리 포트 동시 할당',actual:null,value:null,unit:'',source:'속도별 요구 포트 동시 확보',status:'fail',explanation:`동시에 할당할 물리 포트 ${missing}개 부족`,reason:'동일 물리 포트를 중복 사용해야 하는 요구입니다. 자동 브레이크아웃은 가정하지 않습니다.',evidenceVerified:false,evidenceNote:'등록 포트 구성 기준'});
  }
  const passed=checks.filter(c=>c.status==='pass').length,failed=checks.filter(c=>c.status==='fail').length,unknown=checks.length-passed-failed;
  const shortfall=checks.reduce((n,c)=>n+(c.status==='fail'&&typeof c.value==='number'&&c.value>0&&typeof c.actual==='number'?Math.abs(c.value-c.actual)/c.value:c.status==='fail'?1:0),0);

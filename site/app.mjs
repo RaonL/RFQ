@@ -121,7 +121,8 @@ function candidateDifference(group,evaluations){
  section.append(el('h4',fromHistory?'후보가 바뀐 이유':'우선 검토 모델 비교'));
  for(const check of other.checks){
   if(check.key==='physical_ports'){
-   section.append(el('p',other.model.model+' · '+check.reason));
+   const allocation=el('div');allocation.append(el('p',other.model.model+' · '+check.explanation));
+   appendCheckEditors(allocation,group,check);section.append(allocation);
    continue;
   }
   const current=best.checks.find(c=>c.id===check.id);
@@ -135,6 +136,7 @@ function candidateDifference(group,evaluations){
   const row=el('div',undefined,'difference-row');
   const clause=el('div',undefined,'difference-source');
   clause.append(el('small','RFQ 원문'),el('p',check.source,'source-clause'));
+  appendCheckEditors(clause,group,check);
   const figures=el('dl',undefined,'difference-values');
   differenceFigure(figures,'요구값',requiredValue(current),old&&requiredValue(old)!==requiredValue(current)?'이전 '+requiredValue(old):'');
   for(const [model,c] of [[other.model,check],[best.model,current]]){
@@ -147,9 +149,16 @@ function candidateDifference(group,evaluations){
  }
  return section.childElementCount>1?section:null;
 }
-function inlineEditor(group,requirement){
+function appendCheckEditors(host,group,check){
+ if(check.status==='pass')return;
+ const ids=check.requirementIds??[check.id];
+ for(const r of group.requirements.filter(r=>ids.includes(r.id))){
+  host.append(inlineEditor(group,r,check.requirementIds?r.source+' · 수정':'조건 수정'));
+ }
+}
+function inlineEditor(group,requirement,action){
  const editor=el('details',undefined,'inline-editor');
- editor.append(el('summary','조건 수정'));
+ editor.append(el('summary',action));
  editor.addEventListener('toggle',()=>{
   if(!editor.open)return;
   const draft={...requirement};
@@ -253,10 +262,7 @@ function renderChecks(ev,group){
   labelNarrowCell(required,'요구값');labelNarrowCell(actual,'장비 등록값');
   const source=el('td',undefined,'requirement-source');
   source.append(el('span',c.source,'source-clause'),el('small',c.userEdited?`${c.label} · 직접 수정`:c.label));
-  if(group&&c.status==='unknown'){
-   const requirement=group.requirements.find(r=>r.id===c.id);
-   if(requirement)source.append(inlineEditor(group,requirement));
-  }
+  appendCheckEditors(source,group,c);
   status.append(detail);
   tr.append(source,required,actual,status);body.append(tr);
  }
@@ -384,7 +390,7 @@ function renderGroupResult(group,evaluations,update=null){
   const table=el('table'),head=el('tr');for(const title of ['모델','구분','수치상 충족','미충족','수치 확인'])head.append(el('th',title));table.append(head);
   for(const e of evaluations){const tr=el('tr');tr.append(el('td',e.model.model),el('td',e.numericCandidate?'수치상 후보':'추가 검토'),el('td',String(e.passed)),el('td',String(e.failed)),el('td',String(e.unknown)));table.append(tr);}
   const scroll=el('div',undefined,'scroll');scroll.append(table);allModels.append(scroll);
-  for(const e of evaluations.slice(1,3)){const d=el('details');d.append(el('summary',`${e.model.model} · 항목별 비교`),renderChecks(e));allModels.append(d);}card.append(allModels);
+  for(const e of evaluations.slice(1,3)){const d=el('details');d.append(el('summary',`${e.model.model} · 항목별 비교`),renderChecks(e,group));allModels.append(d);}card.append(allModels);
   const competition=competitorTable(best.model.model);if(competition)card.append(competition);
   const report=el('textarea');report.className='report';report.readOnly=true;report.value=reportText(group,best);report.setAttribute('aria-label',group.name+' 검토 문구');
   const reportDetail=el('details',undefined,'report-details');reportDetail.append(el('summary','검토 문구 내보내기'));
