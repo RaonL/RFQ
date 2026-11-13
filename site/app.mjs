@@ -90,15 +90,24 @@ function renderDraft(){
 }
 function badge(status){return el('span',status==='pass'?'수치상 충족':status==='fail'?'미충족':'확인 필요','badge '+status);}
 function renderChecks(ev){
- const table=el('table',undefined,'numeric-table'),head=el('tr');for(const t of ['항목','요구 조건','등록값','수치 판정','근거·주의사항'])head.append(el('th',t));table.append(head);
- for(const c of ev.checks){const tr=el('tr'),status=el('td'),note=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note'));
+ const table=el('table',undefined,'numeric-table'),head=el('tr');
+ for(const title of ['RFQ 원문 / 해석 항목','요구값','장비 등록값','판정 / 근거']){
+  const th=el('th',title);th.scope='col';head.append(th);
+ }
+ table.createTHead().append(head);
+ const body=table.createTBody();
+ for(const c of ev.checks){const tr=el('tr'),status=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note'));
   const detail=el('details');detail.append(el('summary',c.conditionPending?'시험조건 확인':'근거 보기'),el('small',c.evidenceNote??''));if(c.reason)detail.append(el('p',c.reason));
-  if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}note.append(detail);
+  if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}
   const operator=c.kind==='numeric'?({'<=':'≤','>=':'≥'}[c.operator]??c.operator??''):'';
   const required=el('td',`${operator} ${formatNumber(c.value,c.unit)}`.trim()),actual=el('td',formatNumber(c.actual,c.unit));
-  if(c.comparisonBasis)actual.append(el('small',c.comparisonBasis));
-  labelNarrowCell(required,'요구 조건');labelNarrowCell(actual,'등록값');
-  tr.append(el('td',c.label),required,actual,status,note);table.append(tr);
+  const basis=c.comparisonBasis||(c.key==='dns_qps'&&c.actual!=null?'DNS Express 기준':'');
+  if(basis)actual.append(el('small',basis));
+  labelNarrowCell(required,'요구값');labelNarrowCell(actual,'장비 등록값');
+  const source=el('td',undefined,'requirement-source');
+  source.append(el('span',c.source,'source-clause'),el('small',c.userEdited?`${c.label} · 직접 수정`:c.label));
+  status.append(detail);
+  tr.append(source,required,actual,status);body.append(tr);
  }
  const wrap=el('div',undefined,'scroll');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',ev.model.model+' 요구값과 등록값 비교표');wrap.append(table);return wrap;
 }
@@ -180,7 +189,7 @@ function compare(){
   const reportDetail=el('details',undefined,'report-details');reportDetail.append(el('summary','검토 문구 내보내기'));
   const copy=el('button','검토 문구 복사','subtle');copy.type='button';copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(report.value);copy.textContent='복사됨';}catch{report.focus();report.select();copy.textContent='선택된 문구를 Ctrl+C로 복사하세요';}});reportDetail.append(copy,report);card.append(reportDetail);host.append(card);
  }
- $('results').hidden=false;$('results').scrollIntoView({behavior:'smooth',block:'start'});
+ $('results').hidden=false;$('results-title').focus();$('results').scrollIntoView({block:'start'});
 }
 $('requirements').addEventListener('input',()=>{invalidateDraft();message('입력이 변경되었습니다. 다시 추출해 주세요.');});
 $('example').addEventListener('click',()=>{$('requirements').value=example;invalidateDraft();message('예시를 입력했습니다. 요구사항 추출을 눌러 주세요.');});
