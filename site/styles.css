@@ -117,6 +117,18 @@ pre { font: inherit; }
 .result-stat { display: flex; flex-direction: column; }
 .result-stat strong { font-size: 1.875rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .result-card > h4 { margin-top: 32px; }
+.candidate-difference { margin-block: 24px; }
+.candidate-difference h4 { margin-bottom: 8px; }
+.difference-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 8px 24px; padding-block: 16px; border-top: var(--rule);
+}
+.difference-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.difference-row small, .difference-values .badge { display: block; }
+.difference-values dt { font-size: .8125rem; color: var(--meta); }
+.difference-values dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.difference-values .badge { font-size: .8125rem; }
+.difference-values small { text-transform: none; }
 .gslb-candidates { margin-bottom: 32px; }
 .gslb-heading { grid-column: span 4; grid-row: span 2; }
 .gslb-candidates > :not(.gslb-heading) { grid-column: 5 / -1; }
@@ -145,6 +157,9 @@ footer > span:last-child { grid-column: span 8; }
   .gslb-candidates > :not(.gslb-heading) { grid-column: 3 / -1; }
 }
 @media (max-width: 767px) {
+  .difference-row { grid-template-columns: minmax(0, 1fr); }
+  .candidate-difference { margin-block: 16px; }
+  .result-card > h3 { margin-bottom: 16px; }
   :root { --columns: 1; }
   .site-header { row-gap: 0; }
   .brand, nav, .intro h1, .intro-description, #catalogue-status, .input-main, .file-panel,

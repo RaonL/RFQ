@@ -89,6 +89,64 @@ function renderDraft(){
  $('draft-count').textContent=`${state.groups.length}개 그룹 · 수치 ${count}개 · 별도 검토 ${reviewCount}개`;$('draft').hidden=false;refreshQuestions();
 }
 function badge(status){return el('span',status==='pass'?'수치상 충족':status==='fail'?'미충족':'확인 필요','badge '+status);}
+function requiredValue(check){
+ const operator=check.kind==='numeric'?({'<=':'≤','>=':'≥'}[check.operator]??check.operator??''):'';
+ return `${operator} ${formatNumber(check.value,check.unit)}`.trim();
+}
+function registrationBasis(check){
+ return check.comparisonBasis||(check.key==='dns_qps'&&check.actual!=null?'DNS Express 기준':'');
+}
+// Parsed groups own their comparison history. Replacing the RFQ starts a new comparison.
+const candidateHistory=new WeakMap();
+function differenceFigure(figures,label,value,note){
+ const cell=el('div'),dd=el('dd',value);
+ if(note)dd.append(el('small',note));
+ cell.append(el('dt',label),dd);figures.append(cell);
+ return dd;
+}
+function candidateDifference(group,evaluations){
+ const best=evaluations[0];
+ const previous=candidateHistory.get(group);
+ candidateHistory.set(group,evaluations);
+ if(best.failed||!best.passed)return null;
+ const former=previous?.[0];
+ const fromHistory=former&&former.model.model!==best.model.model;
+ const other=fromHistory?evaluations.find(e=>e.model.model===former.model.model):
+  evaluations.filter(e=>!e.numericCandidate&&e.model.tier<best.model.tier)
+   .sort((a,b)=>b.model.tier-a.model.tier)[0];
+ if(!other)return null;
+ const oldWinnerChecks=fromHistory?former.checks:[];
+ const oldBestChecks=fromHistory?previous.find(e=>e.model.model===best.model.model)?.checks:[];
+ const section=el('section',undefined,'candidate-difference');
+ section.append(el('h4',fromHistory?'후보가 바뀐 이유':'우선 검토 모델 비교'));
+ for(const check of other.checks){
+  if(check.key==='physical_ports'){
+   section.append(el('p',other.model.model+' · '+check.reason));
+   continue;
+  }
+  const current=best.checks.find(c=>c.id===check.id);
+  if(current?.status!=='pass')continue;
+  const oldBest=oldBestChecks?.find(c=>c.id===check.id);
+  const old=oldWinnerChecks.find(c=>c.id===check.id);
+  const newlyEligible=oldBest&&oldBest.status!=='pass';
+  if(fromHistory){
+   if(!(old?.status==='pass'&&check.status!=='pass')&&!newlyEligible)continue;
+  }else if(check.status==='pass')continue;
+  const row=el('div',undefined,'difference-row');
+  const clause=el('div',undefined,'difference-source');
+  clause.append(el('small','RFQ 원문'),el('p',check.source,'source-clause'));
+  const figures=el('dl',undefined,'difference-values');
+  differenceFigure(figures,'요구값',requiredValue(current),old&&requiredValue(old)!==requiredValue(current)?'이전 '+requiredValue(old):'');
+  for(const [model,c] of [[other.model,check],[best.model,current]]){
+   const value=differenceFigure(figures,model.model.replace(/^F5 /,'')+' 등록값',formatNumber(c.actual,c.unit),registrationBasis(c));
+   value.append(badge(c.status));
+   if(c.status==='fail'&&c.operator==='>='&&c.actual<c.value)value.append(el('small',formatNumber(c.value-c.actual,c.unit)+' 부족'));
+   if(c===current&&newlyEligible)value.append(el('small',oldBest.status==='fail'?'이전 조건 미충족':'이전 조건 확인 필요'));
+  }
+  row.append(clause,figures);section.append(row);
+ }
+ return section.childElementCount>1?section:null;
+}
 function renderChecks(ev){
  const table=el('table',undefined,'numeric-table'),head=el('tr');
  for(const title of ['RFQ 원문 / 해석 항목','요구값','장비 등록값','판정 / 근거']){
@@ -99,9 +157,8 @@ function renderChecks(ev){
  for(const c of ev.checks){const tr=el('tr'),status=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note'));
   const detail=el('details');detail.append(el('summary',c.conditionPending?'시험조건 확인':'근거 보기'),el('small',c.evidenceNote??''));if(c.reason)detail.append(el('p',c.reason));
   if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}
-  const operator=c.kind==='numeric'?({'<=':'≤','>=':'≥'}[c.operator]??c.operator??''):'';
-  const required=el('td',`${operator} ${formatNumber(c.value,c.unit)}`.trim()),actual=el('td',formatNumber(c.actual,c.unit));
-  const basis=c.comparisonBasis||(c.key==='dns_qps'&&c.actual!=null?'DNS Express 기준':'');
+  const required=el('td',requiredValue(c)),actual=el('td',formatNumber(c.actual,c.unit));
+  const basis=registrationBasis(c);
   if(basis)actual.append(el('small',basis));
   labelNarrowCell(required,'요구값');labelNarrowCell(actual,'장비 등록값');
   const source=el('td',undefined,'requirement-source');
@@ -162,6 +219,7 @@ function renderGslbCandidates(evaluations){
 }
 function compare(){
  if($('compare').disabled)return;
+ if(!$('results').hidden){$('results-title').focus();$('results').scrollIntoView({block:'start'});return;}
  const catalogue=normalizeCatalogue(state.reference,$('include-excluded').checked),host=$('result-groups');host.replaceChildren();state.evaluations=[];
  for(const group of state.groups){
   const card=el('section',undefined,'result-card');card.append(el('h3',group.name));
@@ -169,11 +227,14 @@ function compare(){
   const evaluations=rankModels(catalogue.models,group.requirements);state.evaluations.push({group,evaluations});
   const best=evaluations[0];if(!best){card.append(el('p','비교 가능한 등록 모델이 없습니다.'));host.append(card);continue;}
   if(!best.checks.length){card.append(el('p','비교할 수치 요구조건이 없습니다.','summary'));const review=renderReview(best.reviewRequirements);if(review)card.append(review);host.append(card);continue;}
-  const gslbList=renderGslbCandidates(evaluations);if(gslbList)card.append(gslbList);
+  const difference=candidateDifference(group,evaluations);
+  const gslbList=renderGslbCandidates(evaluations);if(gslbList&&!difference)card.append(gslbList);
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
   intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':best.failed?'요구 수치 미충족 모델':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
   const stats=el('div',undefined,'result-stats');
   for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['수치 확인',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
+  if(difference)card.append(difference);
+  if(gslbList&&difference)card.append(gslbList);
   card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
   const conditionCount=best.checks.filter(c=>c.conditionPending&&c.status!=='unknown').length;
   if(conditionCount)card.append(el('p',`시험조건이 미지정된 ${conditionCount}개 항목은 수치만 우선 비교했습니다. 해당 행에 별도로 표시했습니다.`,'hint'));
