@@ -35,29 +35,20 @@ test('GSLB ranks all passing table entries first, with an explicit DNS Express b
  assert.equal(aboveMax.some(e=>e.numericCandidate),false);assert.equal(aboveMax[0].model.model,'F5 r10900');
 });
 
-test('published SSLO records select the service chain, units and TPS direction independently',()=>{
- const inputs=[
-  ['SSLO L3 inline throughput 4800Mbps',4.8],
-  ['SSLO receive only outbound 6.7K TPS',6700],
-  ['[SSLO]\n인바운드 L3 인라인 + L2 1개 TPS 10,300 이상',10300],
-  ['BIG-IP SSL Orchestrator L3 inline + (2) L2 services outbound TPS\n5000',5000],
- ];
- for(const [input,actual] of inputs){
-  const e=evaluate('r2800',input);assert.equal(e.checks.length,1,input);
-  assert.equal(e.checks[0].actual,actual,input);assert.equal(e.passed,1,input);
-  assert.match(e.checks[0].sourceUrl,/ssl-orchestrator-datasheet/);
+test('SSLO benchmarks are absent from the published catalogue and hardware comparison',()=>{
+ assert.ok(models.every(m=>!('sslo' in m.servicePerformance)));
+ for(const input of ['SSLO L3 인라인 처리량 10Gbps','SSLO 처리량\n10Gbps 이상',
+  'SSL Throughput (SSLO) 10Gbps','BIG-IP SSL Orchestrator\nSSL TPS RSA 2048 7000']){
+  const result=evaluate('r2800',input);
+  assert.equal(result.checks.length,0,input);assert.equal(result.numericCandidate,false,input);
+  assert.ok(result.reviewRequirements.length,input);
  }
- assert.equal(evaluate('r2800','SSLO L3 인라인 처리량 5Gbps 이상').failed,1);
- assert.equal(evaluate('r5900','SSLO L3 inline inbound TPS 53.4K').checks[0].actual,53400);
- assert.equal(evaluate('r10900','SSLO L3 inline 처리량 37.7Gbps').checks[0].actual,37.7);
- const aboveMaximum=rankModels(models,group('SSLO L3 inline 처리량 40Gbps 이상').requirements)[0];
- assert.equal(aboveMaximum.model.model,'F5 r10900');assert.equal(aboveMaximum.failed,1);
 });
 
-test('missing topology, directions and unpublished models cannot inherit generic SSL performance',()=>{
- for(const [model,input] of [['r2800','SSLO 처리량 4Gbps'],['r4800','SSLO L3 inline TPS 10000'],['r2600','SSLO L3 인라인 처리량 1Gbps']]){
-  const e=evaluate(model,input);assert.equal(e.unknown,1);assert.equal(e.checks[0].actual,null);
- }
- const mixed=evaluate('r2800','GSLB QPS 1M SSLO L3 inline throughput 4Gbps');
- assert.equal(mixed.checks.length,2);assert.equal(mixed.passed,2);assert.equal(mixed.unknown,0);
+test('GSLB and hardware SSL still compare when a document includes an SSLO clause',()=>{
+ const input='GSLB RPS 110만 이상 SSLO L3 인라인 10Gbps\nSSL TPS (RSA 2048) 7000 이상';
+ const best=rankModels(models,group(input).requirements)[0];
+ assert.equal(best.model.model,'F5 r2800');assert.deepEqual(best.checks.map(c=>c.key),['gslb_rps','ssl_tps']);
+ assert.equal(best.passed,2);assert.equal(best.checks[0].comparisonBasis,'DNS Express 기준');
+ assert.equal(evaluate('r2800','SSLO 처리량 10Gbps Memory 32GB').checks[0].key,'memory_gb');
 });

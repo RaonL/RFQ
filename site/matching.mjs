@@ -1,8 +1,7 @@
 /** Numerical comparisons and evidence approval are intentionally separate. */
-import { PORT_SPEEDS, SSLO_PROFILES, SSLO_DIRECTIONS, quantity, splitRequirements } from './parser.mjs';
+import { PORT_SPEEDS, quantity, splitRequirements } from './parser.mjs';
 const RSERIES='https://www.f5.com/content/dam/f5/corp/global/pdf/data-sheet/f5-application-delivery-controller-system-rseries-data-sheet.pdf';
 const DNS='https://cdn.studio.f5.com/files/k6fem79d/production/e34b659aa50f6d9f5006a487b2865f708128dab2.pdf';
-const SSLO_SHEET='https://www.f5.com/pdf/products/ssl-orchestrator-datasheet.pdf';
 const DNS_CONDITIONS='BIG-IP DNS 데이터시트 18쪽 · DNS Express 권한 DNS 최대 Query RPS';
 // Preserved values from matching.py at 023b17a. NOT re-certified by this migration.
 const LEGACY_R2600={l4_rps:850000,ecdsa_tps:5000,ssl_gbps:8,dns_qps:590000,cpu_cores:8};
@@ -67,14 +66,6 @@ export function evaluateModel(model,requirements){
  const checks=comparison.map(r=>{
   let actual=model.metrics[r.key]??null,status='unknown',reason=r.note??'',conditionPending=false;
   let serviceSource='',serviceNote='',comparisonBasis='',label=r.label;
-  if(r.key==='sslo_gbps'||r.key==='sslo_tps'){
-   const profile=SSLO_PROFILES[r.profile],direction=SSLO_DIRECTIONS[r.direction],isTps=r.key==='sslo_tps';
-   const row=model.servicePerformance?.sslo?.[r.profile];
-   actual=(isTps?row?.[r.direction+'_tps']:row?.gbps)??null;
-   label=[r.label,profile,isTps&&direction].filter(Boolean).join(' · ');
-   if(!profile||(isTps&&!direction)){conditionPending=true;reason+=' SSLO 서비스 구성과 TPS 방향을 추출 화면에서 지정하세요.';}
-   if(row){serviceSource=SSLO_SHEET;serviceNote='F5 BIG-IP SSL Orchestrator 데이터시트 · '+profile+' · ECDHE-RSA-AES128-GCM-SHA256';}
-  }
   const gslb=r.key==='gslb_rps'||(r.key==='dns_qps'&&r.context==='gslb');
   if(gslb){
    actual=model.servicePerformance?.dns_qps??null;
@@ -112,14 +103,12 @@ export function evaluateModel(model,requirements){
 }
 export function rankModels(models,requirements){
  const results=models.map(m=>evaluateModel(m,requirements));
- // For an SSLO sizing request, show measured shortfalls before models with no benchmark.
- const missingSslo=e=>e.checks.filter(c=>(c.key==='sslo_gbps'||c.key==='sslo_tps')&&c.actual==null).length;
  const gslbOrder=e=>{
   const rows=e.checks.filter(c=>c.comparisonBasis);
   if(rows.some(c=>c.status==='unknown'))return 2;
   return rows.some(c=>c.status==='fail')?1:0;
  };
- return results.sort((a,b)=>Number(b.numericCandidate)-Number(a.numericCandidate)||gslbOrder(a)-gslbOrder(b)||missingSslo(a)-missingSslo(b)||a.failed-b.failed||a.unknown-b.unknown||a.shortfall-b.shortfall||a.model.tier-b.model.tier||a.model.model.localeCompare(b.model.model));
+ return results.sort((a,b)=>Number(b.numericCandidate)-Number(a.numericCandidate)||gslbOrder(a)-gslbOrder(b)||a.failed-b.failed||a.unknown-b.unknown||a.shortfall-b.shortfall||a.model.tier-b.model.tier||a.model.model.localeCompare(b.model.model));
 }
 export function formatNumber(value,unit='') {return value===null||value===undefined?'자료 없음':typeof value==='boolean'?'필수':`${new Intl.NumberFormat('ko-KR',{maximumFractionDigits:8}).format(value)} ${unit}`.trim();}
 export function reportText(group,evaluation){
