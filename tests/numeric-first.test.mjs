@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {parseGroups,parseRequirements} from '../site/parser.mjs';
-import {normalizeCatalogue,evaluateModel,rankModels,reportText} from '../site/matching.mjs';
+import {normalizeCatalogue,evaluateModel,rankModels,reportText,materialQuestions} from '../site/matching.mjs';
 
 // Same requirement values as the reported failure; customer details are synthetic.
 const rfq=`고객사 : 예시 고객
@@ -28,6 +28,33 @@ SSL Throughput : 8Gbps 이상
 const reference=JSON.parse(await readFile(new URL('../data/reference_data.json',import.meta.url),'utf8'));
 const {models}=normalizeCatalogue(reference);
 const r2600=models.find(m=>m.model==='F5 r2600');
+const fieldVariants=JSON.parse(await readFile(new URL('fixtures/field-rfq.json',import.meta.url),'utf8'));
+const performance=JSON.parse(await readFile(new URL('../data/service_performance.json',import.meta.url),'utf8'));
+const catalogue=normalizeCatalogue({...reference,f5_models:reference.f5_models.map(m=>({...m,servicePerformance:performance[m.model]}))});
+function outcome(text){
+ const [group]=parseGroups(text);
+ return {
+  quantity:group.quantity,
+  questions:[...materialQuestions(catalogue.models,group.requirements)].map(r=>r.key),
+  features:group.requirements.filter(r=>r.kind==='boolean').map(r=>r.key).sort(),
+  ranking:rankModels(catalogue.models,group.requirements).map(e=>({
+   model:e.model.model,candidate:e.numericCandidate,
+   checks:e.checks.map(c=>[c.key,c.operator,c.value,c.unit,c.algorithm,c.context,c.status,c.conditionPending]).sort(([a],[b])=>a.localeCompare(b))
+  }))
+ };
+}
+for(const [style,lines] of Object.entries(fieldVariants)){
+ test(`field RFQ preserves all thresholds, rankings and clarification prompts: ${style}`,()=>{
+  assert.deepEqual(outcome(lines.join('\n')),outcome(rfq));
+ });
+}
+test('a stricter boundary or a different RSA key does change compliance',()=>{
+ for(const [before,after] of [['엘포는 20기가','엘포는 20기가 초과'],['RSA 2048 기준','RSA 4096 기준']]){
+  const changed=fieldVariants['통화 메모'].join('\n').replace(before,after);
+  const r=outcome(changed).ranking.find(e=>e.model==='F5 r2600');
+  assert.equal(r.candidate,false,after);
+ }
+});
 
 test('reported RFQ ranks r2600 using 13 numerical conditions, with ancillary review separate',()=>{
  const group=parseGroups(rfq)[0],results=rankModels(models,group.requirements),best=results[0];

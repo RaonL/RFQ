@@ -1,21 +1,21 @@
 /** Conservative RFQ extraction. Never treats an unparsed clause as compliance. */
 export const METRICS = [
  ['gslb_rps','GSLB Query RPS','RPS',/(?:dns\s+)?gslb(?:\s*(?:max(?:imum)?\s*)?(?:query|쿼리))?(?:\s*(?:rps|qps|성능))?/ig],
- ['l4_rps','L4 HTTP RPS','RPS',/\bl4\s*(?:http\s*)?(?:rps|requests per second)/ig],
- ['l7_rps','L7 HTTP RPS','RPS',/\bl7\s*(?:http\s*)?(?:rps|requests per second)/ig],
+ ['l4_rps','L4 HTTP RPS','RPS',/(?:\bl4|엘포)\s*(?:http\s*)?(?:rps|requests per second|초당\s*요청)/ig],
+ ['l7_rps','L7 HTTP RPS','RPS',/(?:\bl7|엘세븐)\s*(?:http\s*)?(?:rps|requests per second|초당\s*요청)/ig],
  ['dns_qps','DNS Query QPS/RPS','QPS',/(?:(?:dns\s+express\s+)?max(?:imum)?\s*query\s*rps|(?:초당\s*)?dns\s*(?:express\s*)?(?:(?:query|쿼리)\s*)?(?:qps|rps|쿼리)|\bqps\b)/ig],
  ['ssl_gbps','SSL/TLS Throughput','Gbps',/(?:ssl|tls)(?:\/tls)?\s*(?:throughput|처리량|bulk)/ig],
- ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?\d+)?\s*tps/ig],
- ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps|\bssl(?=\s+[\d일이삼사오육칠팔구십백천만억][\d,.일이삼사오육칠팔구십백천만억]*(?:\s*tps\b|[은는을를]|$|\s+(?:이상|이하|초과|미만|나와야|넘어야)))/ig],
+ ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?\d+)?\s*tps|ecdsa(?=(?:는|은)?\s*(?:초당\s*)?[\d천백만]+\s*tps\b)/ig],
+ ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps|\brsa\s*(?:2048|4096|[24]k)(?:\s*bit)?(?=\s*(?:기준(?:으로)?\s*)?(?:초당\s*)?[\d천백만]+\s*tps\b)|\bssl(?=\s+[\d일이삼사오육칠팔구십백천만억][\d,.일이삼사오육칠팔구십백천만억]*(?:\s*tps\b|[은는을를]|$|\s+(?:이상|이하|초과|미만|나와야|넘어야)))/ig],
  ['http_gbps','HTTP/WAF Throughput','Gbps',/(?:http|waf)\s*(?:throughput|처리량)/ig],
  ['http_cps','HTTP CPS','CPS',/http\s*cps/ig],
  ['http_tps','HTTP TPS','TPS',/http\s*tps/ig],
  ['http_rps','HTTP RPS (계층 확인)','RPS',/http\s*rps/ig],
- ['l4_cps','L4 CPS','CPS',/(?:\bl4\s*)?(?:\bcps\b|connections per second)|단위\s*커넥션/ig],
- ['l4_gbps','L4 Throughput','Gbps',/(?:\bl4|엘포)(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
- ['l7_gbps','L7 Throughput','Gbps',/(?:\bl7|엘세븐)(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
+ ['l4_cps','L4 CPS','CPS',/(?:\bl4|엘포)\s*(?:cps\b|초당\s*신규\s*(?:연결|세션))|\bcps\b|connections per second|단위\s*커넥션/ig],
+ ['l4_gbps','L4 Throughput','Gbps',/(?:\bl4|엘포)(?:은|는)?(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
+ ['l7_gbps','L7 Throughput','Gbps',/(?:\bl7|엘세븐)(?:은|는)?(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
  ['concurrent_connections','동시 커넥션','CC',/concurrent\s*connections?|동시\s*(?:커넥션|세션|연결|접속)/ig],
- ['ssd_gb','SSD / Storage','GB',/storage|hard\s*(?:drive|disk)|disk(?:\s*:?\s*ssd)?|ssd(?:\s*storage)?|스토리지/ig],
+ ['ssd_gb','SSD / Storage','GB',/storage|hard\s*(?:drive|disk)|disk(?:\s*:?\s*ssd)?|ssd(?:\s*storage)?|스토리지(?:\s*ssd)?/ig],
  ['memory_gb','Memory','GB',/memory|메모리|\bram\b|\bmem\b/ig],
  ['tenant_vcpus','Tenant vCPU','vCPU',/(?:tenant|테넌트)\s*(?:v?cpu|코어)/ig],
  ['cpu_cores','CPU Core','Core',/\bcpu\b|물리\s*코어/ig],
@@ -39,7 +39,7 @@ const FEATURES=[
  ['backup_restore','백업·복구',/백업|복구|backup|restore/ig],
  ['integrity_document','무결성 확인서',/악의적인\s*백도어\s*미설치\s*확인서|백도어\s*미설치\s*확인서|무결성\s*확인서/ig]
 ];
-const NUMBER=/(\d[\d,]*(?:\.\d+)?)\s*(tbps|gbps|mbps|tbit\/s|gbit\/s|mbit\/s|tb|gb|mb|tib|gib|mib|억|만|ghz|mhz|vcpus?|cores?|코어|k|m|g)?/ig;
+const NUMBER=/(\d+(?:,\d+)*(?:\.\d+)?)\s*(tbps|gbps|mbps|tbit\/s|gbit\/s|mbit\/s|tb|gb|mb|tib|gib|mib|억|만|ghz|mhz|vcpus?|cores?|코어|k|m|g)?/ig;
 const HEADING=/^(?:\d+[.)]\s*)?(?:웹방화벽\s*\(waf\)|로그서버\s*\(waf\)|(?:dns\s*)?gslb|(?:big-ip\s+)?(?:sslo|ssl[-\s]+orchestrator)|dns\s*gslb\s*[-—–]\s*\D+|l4\s*스위치(?:\s*요구사항)?|\[.+\])$/i;
 const IGNORE=/^(?:구분|주요\s*기능요건|수량|단위|비고|h\/w|인터페이스|주요기능|세부내용|세부\s*규격|성능\s*및\s*규격|요구규격\s*[:：]?)$/i;
 export function normalizeText(text){
@@ -89,7 +89,8 @@ function koreanAmount(token){
  return String(total+section+(pending??0));
 }
 function spokenBody(body,unit){
- let s=body.replace(/(?<![가-힣\d,.])[\d영일이삼사오육칠팔구십백천만억]+(?:\.\d+[십백천만억]?)?(?=\s|$|[은는을를건,]|기가|이상|이하)/g,
+ let s=body.replace(/(\d+만)\s+(?=\d+[천백십])/g,'$1');
+ s=s.replace(/(?<![가-힣\d,.])[\d영일이삼사오육칠팔구십백천만억]+(?:\.\d+[십백천만억]?)?(?=\s|$|[은는을를건,]|기가|이상|이하)/g,
   token=>/[가-힣]/.test(token)?koreanAmount(token):token);
  if(unit==='Gbps'||unit==='GB')s=s.replace(/(\d)\s*기가(?![바비])/g,'$1 '+unit);
  return s.replace(/안\s*넘어야|넘(?:으면\s*안\s*(?:돼요?|되(?:나요|는데|면)?|됩니다)|지\s*(?:않아야|않는|말아야))|넘어서는\s*안\s*돼/g,' 이하 ')
@@ -112,7 +113,7 @@ function parseBody(key,label,unit,body,source){
  const matches=[...rest.matchAll(new RegExp(NUMBER.source,'ig'))];
  if(!matches.length)return {missing:true, requirements:result};
  const m=matches[0], value=quantity(m[1],m[2]??'',unit), op=operator(rest);
- if(value===null||op===null||matches.length>1||/[-−]\s*\d/.test(rest))return {requirements:[...result,unknown(source,'수치·단위·범위 또는 비교 조건이 모호합니다. 한 항목에 한 수치 조건으로 정리하세요.')]};
+ if(value===null||op===null||matches.length>1||/[-−]\s*\d/.test(rest))return {requirements:[...result,unknown(source,'수치·단위·범위 또는 비교 조건이 모호합니다. 한 항목에 한 수치 조건으로 정리하세요.',true)]};
  const attachedUnit=/^[a-z]/i.test(rest.slice(m.index+m[0].length))&&!/^(?:rps|cps|tps|cc|entry|entries|ports?)\b/i.test(rest.slice(m.index+m[0].length));
  rest=maskAt(rest,m.index,m.index+m[0].length);
  if(key==='gslb_rps'||key==='dns_qps')rest=rest.replace(/\bqps\b/ig,' ');
@@ -125,19 +126,21 @@ function parseBody(key,label,unit,body,source){
  }
  if(key==='generic_gbps'&&/^(throughput|처리\s*성능)/i.test(source))req.ambiguity='layer';
  result.unshift(req);
- if(scrub(rest))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`,attachedUnit||/\d/.test(rest)));
+ // Only discard particles and endings after the actual value and bound have been read.
+ const remaining=rest.replace(/(?:최소|이상|이하|초과|미만)(?:이요|이고요|예요|으로요|으로\s*잡아\s*주세요)|필요해요|기준으로|정도가(?=\s*최소)|(?:^|\s)(?:은|는|가|랑)(?=\s|$)/g,' ');
+ if(scrub(remaining))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`,attachedUnit||/\d/.test(rest)));
  return {requirements:result};
 }
 function parseLine(line){
  const out=[]; let text=line;
  // BOM optics are not physical appliance ports. Retain their quantities for review.
  text=text.replace(/(?:지빅|gbic|transceiver|트랜시버)\s*(\d+)\s*g\s*[^,;]*?(\d+)\s*개(?:\([^)]*\))?/ig,(s,speed,count)=>{out.push(metric(`optics_${speed}g_count`,Number(count),s,{label:`${speed}G 트랜시버 공급`,unit:'개',note:'BOM 수량·장비별/전체 수량·정품·호환성 확인 필요'}));return ' ';});
- const ports=/(?<![a-z0-9])(\d+(?:\s*g?\s*\/\s*\d+)*\s*g(?:bps|e)?)\s*((?:(?:qsfp28|qsfp\+|sfp28|sfp\+|qsfp|sfp|copper|utp|rj[- ]?45|광|데이터|base[- ]?t)\s*)*)(\d+)\s*(?:ports?\b|포트|개)(?:\s*(이상|이하|초과|미만))?/ig;
+ const ports=/(?<![a-z0-9])(\d+(?:\s*(?:g|기가)?\s*\/\s*\d+)*\s*(?:g(?:bps|e)?|기가))\s*((?:(?:qsfp28|qsfp\+|sfp28|sfp\+|qsfp|sfp|copper|utp|rj[- ]?45|광|데이터|base[- ]?t)\s*)*)(\d+|한|두|세|네)\s*(?:ports?\b|포트|개)(?:\s*(이상|이하|초과|미만))?/ig;
  text=text.replace(ports,(s,speeds,medium,count)=>{
   const all=[...speeds.matchAll(/\d+/g)].map(m=>Number(m[0])), speed=Math.max(...all), copper=/copper|utp|rj|base/i.test(medium);
   const key=(copper?{1:'copper_1g_ports',10:'copper_10g_ports'}:{1:'sfp_1g_ports',10:'sfp_plus_10g_ports',25:'sfp28_25g_ports',40:'qsfp_40g_ports',100:'qsfp28_100g_ports'})[speed];
   if(!key)out.push(unknown(s,'등록되지 않은 포트 속도/매체입니다.'));
-  else {out.push(metric(key,Number(count),s,{operator:operator(s)??'>=',note:'물리 포트 동시 할당 기준. 트랜시버·속도 모드와 호환성은 별도 확인.'}));if(all.length>1)out.push(unknown(s,'최고 속도의 포트 수를 비교합니다. 나머지 속도 모드와 매체 호환성은 별도 확인하세요.',false));}
+  else {out.push(metric(key,({한:1,두:2,세:3,네:4})[count]??Number(count),s,{operator:operator(s)??'>=',note:'물리 포트 동시 할당 기준. 트랜시버·속도 모드와 호환성은 별도 확인.'}));if(all.length>1)out.push(unknown(s,'최고 속도의 포트 수를 비교합니다. 나머지 속도 모드와 매체 호환성은 별도 확인하세요.',false));}
   return ' ';
  });
  for(const [key,label,rx] of FEATURES){rx.lastIndex=0;const ms=[...line.matchAll(rx)];if(ms.length){out.push({key,label,kind:'boolean',value:true,unit:'',operator:'=',source:line,note:'라이선스·구성·공식 지원 근거 확인 필요'});for(const m of ms)text=text.replace(m[0],' ');}}
@@ -152,7 +155,7 @@ function parseLine(line){
   if(h.key==='l4_cps'&&/^cps$/i.test(text.slice(h.start,h.end))&&previous?.key.endsWith('_cps')&&/\d[\d,.]*\s*[km]?\s*$/i.test(text.slice(previous.end,h.start))&&!/^\s*\d/.test(text.slice(h.end)))continue;
   spans.push(h);
  }
- if(!spans.length){if(scrub(text))out.push(unknown(line));return {out,pending:null};}
+ if(!spans.length){if(scrub(text))out.push(unknown(line,undefined,/\d/.test(text)));return {out,pending:null};}
  if(scrub(text.slice(0,spans[0].start)))out.push(unknown(text.slice(0,spans[0].start)));
  let pending=null;
  for(let i=0;i<spans.length;i++){
