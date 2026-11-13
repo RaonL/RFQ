@@ -78,8 +78,18 @@ with sync_playwright() as p:
   assert 'F5 r2600 → F5 r2800' in outcome.inner_text() and 'RSA 2048' in outcome.inner_text()
   assert outcome.evaluate('n=>n===document.activeElement') and page.locator('#requirements').input_value()=='SSL TPS (RSA 4096) 7000 이상'
   checks.append('inline basis and value edits rerank candidates and focus the local result')
-  page.fill('#requirements','L4 Throughput 21Gbps 이상');page.click('#parse');page.click('#compare')
+  original='L4 Throughput 20Gbps 이상'
+  page.fill('#requirements',original);page.click('#parse');page.click('#compare')
+  assert card.locator('.candidate-name').inner_text()=='F5 r2600'
+  card.locator('button.result-stat.pass').click()
+  editor=rows.locator('.inline-editor')
+  editor.locator('summary').click();editor.get_by_label('요구값 (Gbps)').fill('21')
+  editor.get_by_role('button',name='수정하고 다시 비교').click()
   assert card.locator('.candidate-name').inner_text()=='F5 r2800'
+  assert 'F5 r2600 → F5 r2800' in outcome.inner_text() and '25 Gbps' in outcome.inner_text()
+  assert page.locator('#requirements').input_value()==original and outcome.evaluate('n=>n===document.activeElement')
+  checks.append('raising a passing requirement in the mobile results reranks the candidate')
+  card.get_by_role('button',name='전체 보기',exact=True).click()
   editor=card.locator('.difference-row .inline-editor')
   editor.locator('summary').click();editor.get_by_label('요구값 (Gbps)').fill('20')
   editor.get_by_role('button',name='수정하고 다시 비교').click()

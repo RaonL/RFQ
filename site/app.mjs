@@ -150,7 +150,6 @@ function candidateDifference(group,evaluations){
  return section.childElementCount>1?section:null;
 }
 function appendCheckEditors(host,group,check){
- if(check.status==='pass')return;
  const ids=check.requirementIds??[check.id];
  for(const r of group.requirements.filter(r=>ids.includes(r.id))){
   host.append(inlineEditor(group,r,check.requirementIds?r.source+' · 수정':'조건 수정'));
