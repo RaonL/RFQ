@@ -93,6 +93,7 @@ function spokenBody(body,unit){
  s=s.replace(/(?<![가-힣\d,.])[\d영일이삼사오육칠팔구십백천만억]+(?:\.\d+[십백천만억]?)?(?=\s|$|[은는을를건,]|기가|이상|이하)/g,
   token=>/[가-힣]/.test(token)?koreanAmount(token):token);
  if(unit==='Gbps'||unit==='GB')s=s.replace(/(\d)\s*기가(?![바비])/g,'$1 '+unit);
+ if(unit==='GB')s=s.replace(/(\d)\s*테라(?:바이트)?(?!비트)/g,'$1 TB');
  return s.replace(/안\s*넘어야|넘(?:으면\s*안\s*(?:돼요?|되(?:나요|는데|면)?|됩니다)|지\s*(?:않아야|않는|말아야))|넘어서는\s*안\s*돼/g,' 이하 ')
   .replace(/넘어야|넘는|넘게/g,' 초과 ')
   .replace(/초당|([0-9만억])\s*건/g,'$1 ')

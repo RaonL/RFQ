@@ -1,5 +1,5 @@
 import {parseGroups,LABELS} from './parser.mjs';
-import {normalizeCatalogue,rankModels,formatNumber,reportText,interpretations,interpret,materialQuestions} from './matching.mjs';
+import {normalizeCatalogue,rankModels,formatNumber,registeredValue,reportText,interpretations,interpret,materialQuestions} from './matching.mjs';
 import {extractFile} from './files.mjs';
 const $=id=>document.getElementById(id);
 const state={reference:null,groups:[],evaluations:[],fileGeneration:0};
@@ -138,9 +138,9 @@ function candidateDifference(group,evaluations){
   const figures=el('dl',undefined,'difference-values');
   differenceFigure(figures,'요구값',requiredValue(current),old&&requiredValue(old)!==requiredValue(current)?'이전 '+requiredValue(old):'');
   for(const [model,c] of [[other.model,check],[best.model,current]]){
-   const value=differenceFigure(figures,model.model.replace(/^F5 /,'')+' 등록값',formatNumber(c.actual,c.unit),registrationBasis(c));
+   const value=differenceFigure(figures,model.model.replace(/^F5 /,'')+' 등록값',registeredValue(c),registrationBasis(c));
    value.append(badge(c.status));
-   if(c.status==='fail'&&c.operator==='>='&&c.actual<c.value)value.append(el('small',formatNumber(c.value-c.actual,c.unit)+' 부족'));
+   if(c.status==='fail'&&c.operator==='>='&&c.actual!=null&&c.actual<c.value)value.append(el('small',formatNumber(c.value-c.actual,c.unit)+' 부족'));
    if(c===current&&newlyEligible)value.append(el('small',oldBest.status==='fail'?'이전 조건 미충족':'이전 조건 확인 필요'));
   }
   row.append(clause,figures);section.append(row);
@@ -154,10 +154,10 @@ function renderChecks(ev){
  }
  table.createTHead().append(head);
  const body=table.createTBody();
- for(const c of ev.checks){const tr=el('tr'),status=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note'));
+ for(const c of ev.checks){const tr=el('tr',undefined,c.status),status=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note unknown'));
   const detail=el('details');detail.append(el('summary',c.conditionPending?'시험조건 확인':'근거 보기'),el('small',c.evidenceNote??''));if(c.reason)detail.append(el('p',c.reason));
   if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}
-  const required=el('td',requiredValue(c)),actual=el('td',formatNumber(c.actual,c.unit));
+  const required=el('td',requiredValue(c)),actual=el('td',registeredValue(c),'registered-value');
   const basis=registrationBasis(c);
   if(basis)actual.append(el('small',basis));
   labelNarrowCell(required,'요구값');labelNarrowCell(actual,'장비 등록값');
@@ -205,6 +205,8 @@ function renderGslbCandidates(evaluations){
    if(evaluation.checks.length>checks.length)model.append(el('small',evaluation.numericCandidate?'전체 수치 충족':'다른 요구조건 검토'));
    const value=el('div',formatNumber(checks[0].actual,'RPS'),'gslb-value');
    if(checks[0].actual!==null)value.append(el('small',checks[0].comparisonBasis));
+   const status=checks.some(c=>c.status==='fail')?'fail':checks.some(c=>c.status==='unknown')?'unknown':'pass';
+   value.append(badge(status));
    entry.append(model,value);list.append(entry);
   }
   return list;
@@ -232,7 +234,7 @@ function compare(){
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
   intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':best.failed?'요구 수치 미충족 모델':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
   const stats=el('div',undefined,'result-stats');
-  for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['수치 확인',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
+  for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['확인 필요',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
   if(difference)card.append(difference);
   if(gslbList&&difference)card.append(gslbList);
   card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));

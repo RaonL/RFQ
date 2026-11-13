@@ -91,9 +91,17 @@ tr { border-bottom: var(--rule); }
 .source-clause, .review-list p, pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 td small { display: block; }
 .requirement-source small { margin-top: 4px; }
-.badge { font-weight: 700; }
-.badge.pass { font-weight: 500; }
-.badge.fail { text-decoration: underline double; text-underline-offset: 4px; }
+.pass { --status-ink: #105538; --status-fill: #e5f5eb; --status-mark: #21804f; }
+.unknown { --status-ink: #704500; --status-fill: #fff1cb; --status-mark: #a96800; }
+.fail { --status-ink: #912322; --status-fill: #fde8e7; --status-mark: #bb3834; }
+.badge {
+  display: inline-block; width: fit-content; max-width: 100%;
+  padding: 2px 7px; font-size: .875rem; font-weight: 700;
+  color: var(--status-ink); background: var(--status-fill);
+}
+.numeric-table tbody tr > td:first-child { border-inline-start: 4px solid var(--status-mark); padding-inline-start: 12px; }
+.registered-value, .difference-values dd { white-space: pre-line; }
+.condition-note { color: var(--status-ink); font-weight: 600; }
 .draft-table th:first-child { width: 33.333%; }
 .draft-table th:nth-child(2) { width: 25%; }
 .draft-table th:nth-child(4) { width: 16.667%; }
@@ -114,7 +122,8 @@ pre { font: inherit; }
 .candidate-overview > div:first-child { grid-column: span 6; }
 .candidate-name { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.12; letter-spacing: -.02em; }
 .result-stats { grid-column: span 6; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
-.result-stat { display: flex; flex-direction: column; }
+.result-stat { display: flex; flex-direction: column; padding: 6px 8px; border-top: 3px solid var(--status-mark); color: var(--status-ink); background: var(--status-fill); }
+.result-stat span { color: inherit; font-weight: 600; letter-spacing: 0; }
 .result-stat strong { font-size: 1.875rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .result-card > h4 { margin-top: 32px; }
 .candidate-difference { margin-block: 24px; }
@@ -127,7 +136,7 @@ pre { font: inherit; }
 .difference-row small, .difference-values .badge { display: block; }
 .difference-values dt { font-size: .8125rem; color: var(--meta); }
 .difference-values dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
-.difference-values .badge { font-size: .8125rem; }
+.difference-values .badge { margin-top: 4px; font-size: .8125rem; }
 .difference-values small { text-transform: none; }
 .gslb-candidates { margin-bottom: 32px; }
 .gslb-heading { grid-column: span 4; grid-row: span 2; }

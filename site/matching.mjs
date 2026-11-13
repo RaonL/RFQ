@@ -88,7 +88,8 @@ export function evaluateModel(model,requirements){
   if(r.ambiguity){
    const variants=interpretations[r.ambiguity].map(choice=>evaluateModel(model,[interpret(r,choice)]).checks[0]);
    const same=variants.every(v=>v.status===variants[0].status);
-   return {...r,actual:null,status:same?variants[0].status:'unknown',conditionPending:true,evidenceVerified:false,
+   const registeredOptions=variants.map(v=>({label:v.label,value:v.actual,unit:v.unit}));
+   return {...r,actual:null,registeredOptions,status:same?variants[0].status:'unknown',conditionPending:true,evidenceVerified:false,
     reason:variants.map(v=>`${v.label}: ${formatNumber(v.actual,v.unit)}`).join(' / '),evidenceNote:'가능한 두 시험 기준을 각각 비교했습니다.'};
   }
   let actual=model.metrics[r.key]??null,status='unknown',reason=r.note??'',conditionPending=false;
@@ -138,10 +139,14 @@ export function rankModels(models,requirements){
  return results.sort((a,b)=>Number(b.numericCandidate)-Number(a.numericCandidate)||gslbOrder(a)-gslbOrder(b)||a.failed-b.failed||a.unknown-b.unknown||a.shortfall-b.shortfall||a.model.tier-b.model.tier||a.model.model.localeCompare(b.model.model));
 }
 export function formatNumber(value,unit='') {return value===null||value===undefined?'자료 없음':typeof value==='boolean'?'필수':`${new Intl.NumberFormat('ko-KR',{maximumFractionDigits:8}).format(value)} ${unit}`.trim();}
+export function registeredValue(check){
+ if(check.registeredOptions)return check.registeredOptions.map(o=>o.label+' · '+formatNumber(o.value,o.unit)).join('\n');
+ return formatNumber(check.actual,check.unit);
+}
 export function reportText(group,evaluation){
  const title=evaluation.numericCandidate?'등록 수치상 검토 후보':'추가 검토 대상 (충족 추천 아님)';
  return [`[RFQ 검토] ${group.name}`,`${title}: ${evaluation.model.model}`,'이 결과는 등록 자료와의 비교이며, 최신 공식 사양·라이선스·구성 확인 전 최종 제안을 확정하지 않습니다.',
  `수치 ${evaluation.checks.length}개: 충족 ${evaluation.passed} / 미충족 ${evaluation.failed} / 수치 확인 ${evaluation.unknown}`,
- ...evaluation.checks.map(c=>`- ${c.label}: ${c.status==='pass'?'수치상 충족':c.status==='fail'?'미충족':'수치 확인 필요'} | 요구 ${c.operator??''} ${formatNumber(c.value,c.unit)} | 등록 ${formatNumber(c.actual,c.unit)}${c.comparisonBasis?' ('+c.comparisonBasis+')':''}${c.conditionPending?' | 시험조건 확인 필요':''}`),
+ ...evaluation.checks.map(c=>`- ${c.label}: ${c.status==='pass'?'수치상 충족':c.status==='fail'?'미충족':'수치 확인 필요'} | 요구 ${c.operator??''} ${formatNumber(c.value,c.unit)} | 등록 ${registeredValue(c).replaceAll('\n',' / ')}${c.comparisonBasis?' ('+c.comparisonBasis+')':''}${c.conditionPending?' | 시험조건 확인 필요':''}`),
  ...(evaluation.reviewRequirements.length?['별도 기능·문구 검토 (수치 집계에서 제외):',...evaluation.reviewRequirements.map(r=>`- ${r.label}: ${r.source}`)]:[])].join('\n');
 }

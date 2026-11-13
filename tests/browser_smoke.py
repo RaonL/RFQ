@@ -29,9 +29,9 @@ with sync_playwright() as p:
     code=re.sub(r'\bexport (?=(?:async )?function|const)', '', code)
     return 'const '+name+'Module=(()=>{'+imports+code+';return {'+exports+'};})();'
    src=module('parser','', 'parseGroups,parseRequirements,LABELS,PORT_SPEEDS,quantity,splitRequirements')
-   src+=module('matching','const {LABELS,PORT_SPEEDS,quantity,splitRequirements}=parserModule;', 'normalizeCatalogue,rankModels,formatNumber,reportText,materialQuestions,interpret,interpretations')
+   src+=module('matching','const {LABELS,PORT_SPEEDS,quantity,splitRequirements}=parserModule;', 'normalizeCatalogue,rankModels,formatNumber,registeredValue,reportText,materialQuestions,interpret,interpretations')
    src+=module('files','', 'extractFile')
-   src+='const {parseGroups,LABELS,splitRequirements}=parserModule;const {normalizeCatalogue,rankModels,formatNumber,reportText,materialQuestions,interpret,interpretations}=matchingModule;const {extractFile}=filesModule;'
+   src+='const {parseGroups,LABELS,splitRequirements}=parserModule;const {normalizeCatalogue,rankModels,formatNumber,registeredValue,reportText,materialQuestions,interpret,interpretations}=matchingModule;const {extractFile}=filesModule;'
    src+=re.sub(r'^import .*?;\n','',(base/'app.mjs').read_text(),flags=re.M)
    fixture=json.loads((base/'data/catalogue.json').read_text())
    page.evaluate('(data)=>{window.fetch=async()=>({ok:true,json:async()=>data});}', fixture)

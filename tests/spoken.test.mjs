@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseGroups,parseRequirements} from '../site/parser.mjs';
-import {materialQuestions,normalizeModel,evaluateModel,interpret,interpretations} from '../site/matching.mjs';
+import {materialQuestions,normalizeModel,evaluateModel,interpret,interpretations,registeredValue} from '../site/matching.mjs';
 
 test('colloquial clauses preserve their original wording, units and strict bounds',()=>{
  const input='엘포 20기가, GSLB 백만은 넘어야 하고 메모리 32기가면 돼';
@@ -39,4 +39,21 @@ test('relative branch bandwidth and shared memory retain the original clauses',(
  assert.deepEqual(dr.requirements.map(r=>r.value),[10,64]);
  assert.equal(dr.requirements[0].source,'DR은 그 절반');
  assert.equal(hq.requirements[0].ambiguity,'layer');
+});
+
+test('SSD spoken terabytes retain their decimal GB threshold',()=>{
+ for(const input of ['SSD 1테라 이상','SSD 1테라바이트 이상']){
+  const rows=parseRequirements(input);
+  assert.deepEqual(rows.map(r=>[r.key,r.value,r.unit,r.source]),[['ssd_gb',1000,'GB',input]]);
+ }
+});
+
+test('unspecified throughput shows both registered rates behind its status',()=>{
+ const requirements=parseRequirements('Throughput 70Gbps 이상');
+ for(const [l7,status] of [[75,'pass'],[65,'unknown']]){
+  const model=normalizeModel({model:'A',metrics:{l4_gbps:95,l7_gbps:l7}});
+  const [check]=evaluateModel(model,requirements).checks;
+  assert.equal(check.status,status);
+  assert.equal(registeredValue(check),`L4 Throughput · 95 Gbps\nL7 Throughput · ${l7} Gbps`);
+ }
 });
