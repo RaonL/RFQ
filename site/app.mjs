@@ -140,7 +140,7 @@ function candidateDifference(group,evaluations){
   for(const [model,c] of [[other.model,check],[best.model,current]]){
    const value=differenceFigure(figures,model.model.replace(/^F5 /,'')+' 등록값',registeredValue(c),registrationBasis(c));
    value.append(badge(c.status));
-   if(c.status==='fail'&&c.operator==='>='&&c.actual!=null&&c.actual<c.value)value.append(el('small',formatNumber(c.value-c.actual,c.unit)+' 부족'));
+   if(c.explanation)value.append(el('small',c.explanation,'verdict-explanation'));
    if(c===current&&newlyEligible)value.append(el('small',oldBest.status==='fail'?'이전 조건 미충족':'이전 조건 확인 필요'));
   }
   row.append(clause,figures);section.append(row);
@@ -154,7 +154,9 @@ function renderChecks(ev){
  }
  table.createTHead().append(head);
  const body=table.createTBody();
- for(const c of ev.checks){const tr=el('tr',undefined,c.status),status=el('td');status.append(badge(c.status));if(c.conditionPending)status.append(el('small','시험조건 별도 확인','condition-note unknown'));
+ for(const c of ev.checks){const tr=el('tr',undefined,c.status),status=el('td');status.append(badge(c.status));
+  if(c.explanation)status.append(el('p',c.explanation,'verdict-explanation'));
+  if(c.conditionPending&&c.status!=='unknown')status.append(el('small','시험조건 별도 확인','condition-note unknown'));
   const detail=el('details');detail.append(el('summary',c.conditionPending?'시험조건 확인':'근거 보기'),el('small',c.evidenceNote??''));if(c.reason)detail.append(el('p',c.reason));
   if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}
   const required=el('td',requiredValue(c)),actual=el('td',registeredValue(c),'registered-value');

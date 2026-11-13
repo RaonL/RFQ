@@ -5,6 +5,28 @@ import { normalizeModel, evaluateModel, rankModels, normalizeCatalogue } from '.
 const value = (t, k) => parseRequirements(t).find(r => r.key === k)?.value;
 const raw = {model:'F5 r2600', tier:1, specs:{'L4/L7 Throughput':'20G / 13G','L4 CPS':'170K','L7 RPS (HTTP)':'475K','SSL TPS (RSA 2K)':'7K','동시 커넥션':'19M','인터페이스':'4x 25G/10G SFP28, 4x 10G/1G Copper',Memory:'32 GB',Storage:'480GB M.2 SSD'}};
 const model = () => normalizeModel(raw);
+test('failure explanations use the comparison direction, strict boundary and original unit',()=>{
+ for(const [source,expected] of [
+  ['L4 Throughput 21Gbps 이상','1 Gbps 부족'],
+  ['L4 Throughput 16Gbps 이하','4 Gbps 초과'],
+  ['L4 Throughput 20Gbps 초과','등록값이 경계값과 같습니다. 20 Gbps 초과가 필요합니다.'],
+  ['L4 Throughput 20Gbps 미만','등록값이 경계값과 같습니다. 20 Gbps 미만이 필요합니다.'],
+  ['L4 Throughput 정확히 21.25Gbps','1.25 Gbps 부족']
+ ]){
+  const [check]=evaluateModel(model(),parseRequirements(source)).checks;
+  assert.equal(check.status,'fail');assert.equal(check.explanation,expected);
+ }
+});
+test('unknown explanations distinguish missing hardware data, test basis and input',()=>{
+ const evaluate=source=>evaluateModel(model(),parseRequirements(source)).checks[0];
+ assert.match(evaluate('CPU 주파수 2GHz 이상').explanation,/등록값이 없습니다/);
+ assert.match(evaluate('SSL TPS (RSA 4096) 7000 이상').explanation,/RSA 4096.*없습니다.*RSA 2048/);
+ assert.match(evaluate('L4 Throughput').explanation,/수치가 빠져/);
+ assert.match(evaluate('Throughput 17Gbps 이상').explanation,/L4.*L7.*기준/);
+ assert.match(evaluate('Throughput 22Gbps 이상').explanation,/L4.*2 Gbps 부족\nL7.*9 Gbps 부족/);
+ const portChecks=evaluateModel(model(),parseRequirements('25G SFP28 4Port 이상\n10G SFP+ 2Port 이상')).checks;
+ assert.equal(portChecks.find(c=>c.key==='physical_ports').explanation,'동시에 할당할 물리 포트 2개 부족');
+});
 const cases = [
  ['L4 Throughput 20Gbps 이상 L7 Throughput 40Gbps 이상','l7_gbps',40],
  ['SSL TPS (RSA 2048bit) 10000 이상','ssl_tps',10000],
