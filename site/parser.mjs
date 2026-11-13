@@ -6,14 +6,14 @@ export const METRICS = [
  ['dns_qps','DNS Query QPS/RPS','QPS',/(?:(?:dns\s+express\s+)?max(?:imum)?\s*query\s*rps|(?:초당\s*)?dns\s*(?:express\s*)?(?:(?:query|쿼리)\s*)?(?:qps|rps|쿼리)|\bqps\b)/ig],
  ['ssl_gbps','SSL/TLS Throughput','Gbps',/(?:ssl|tls)(?:\/tls)?\s*(?:throughput|처리량|bulk)/ig],
  ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?\d+)?\s*tps/ig],
- ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps/ig],
+ ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps|\bssl(?=\s+[\d일이삼사오육칠팔구십백천만억][\d,.일이삼사오육칠팔구십백천만억]*(?:\s*tps\b|[은는을를]|$|\s+(?:이상|이하|초과|미만|나와야|넘어야)))/ig],
  ['http_gbps','HTTP/WAF Throughput','Gbps',/(?:http|waf)\s*(?:throughput|처리량)/ig],
  ['http_cps','HTTP CPS','CPS',/http\s*cps/ig],
  ['http_tps','HTTP TPS','TPS',/http\s*tps/ig],
  ['http_rps','HTTP RPS (계층 확인)','RPS',/http\s*rps/ig],
  ['l4_cps','L4 CPS','CPS',/(?:\bl4\s*)?(?:\bcps\b|connections per second)|단위\s*커넥션/ig],
- ['l4_gbps','L4 Throughput','Gbps',/\bl4\s*(?:throughput|처리량)/ig],
- ['l7_gbps','L7 Throughput','Gbps',/\bl7\s*(?:throughput|처리량)/ig],
+ ['l4_gbps','L4 Throughput','Gbps',/(?:\bl4|엘포)(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
+ ['l7_gbps','L7 Throughput','Gbps',/(?:\bl7|엘세븐)(?:\s*(?:throughput|처리량)|(?=\s*\d+(?:\.\d+)?\s*(?:기가|[gmt]bps)))/ig],
  ['concurrent_connections','동시 커넥션','CC',/concurrent\s*connections?|동시\s*(?:커넥션|세션|연결|접속)/ig],
  ['ssd_gb','SSD / Storage','GB',/storage|hard\s*(?:drive|disk)|disk(?:\s*:?\s*ssd)?|ssd(?:\s*storage)?|스토리지/ig],
  ['memory_gb','Memory','GB',/memory|메모리|\bram\b|\bmem\b/ig],
@@ -62,14 +62,44 @@ function operator(text){
 function unknown(source,note='해석되지 않은 조건입니다. 원문을 수정하거나 수동 검토하세요.',blocksNumeric=/\d/.test(source)) {return {key:'unparsed',label:blocksNumeric?'수치 해석 필요':'별도 검토',kind:'unknown',value:null,unit:'',operator:'>=',source,note,blocksNumeric};}
 export function splitRequirements(requirements){
  const comparison=[],review=[];
- for(const r of requirements)(r.kind==='numeric'||r.blocksNumeric?comparison:review).push(r);
+ for(const r of requirements)(!r.deferred&&(r.kind==='numeric'||r.blocksNumeric)?comparison:review).push(r);
  return {comparison,review};
 }
 function metric(key,value,source,extra={}) {return {key,...(LABELS[key]??{label:key,unit:''}),kind:'numeric',value,operator:'>=',source,note:'',...extra};}
 function scrub(text){return text.replace(/요구\s*규격|요구\s*사항|최소\s*규격|최소|최대|이상|이하|초과|미만|정확히|필수|제공|지원|요구|기능|구성|통일|\b(?:rps|cps|tps|cc|entry|entries|core|cores|vcpu|vcpus|gbps|gb|ports?)\b|업링크|다운링크/gi,'').replace(/[\s:：()[\]{}=<>≥≤,./\-+•·]/g,'').trim();}
 function maskAt(text,start,end){return text.slice(0,start)+' '.repeat(end-start)+text.slice(end);}
+// Convert one complete Sino-Korean quantity. Reject malformed units instead of guessing.
+function koreanAmount(token){
+ const digits='영일이삼사오육칠팔구',units={십:10,백:100,천:1000,만:10000,억:100000000};
+ let total=0,section=0,pending=null,lastSmall=10000,lastLarge=Infinity;
+ for(const part of token.match(/\d+(?:\.\d+)?|./g)){
+  const scale=units[part];
+  if(!scale){
+   if(pending!==null)return token;
+   pending=/^\d/.test(part)?Number(part):digits.indexOf(part);
+  }else if(scale<10000){
+   if(scale>=lastSmall)return token;
+   section+=(pending??1)*scale;pending=null;lastSmall=scale;
+  }else{
+   if(scale>=lastLarge)return token;
+   total+=(section+(pending??(section?0:1)))*scale;
+   section=0;pending=null;lastSmall=10000;lastLarge=scale;
+  }
+ }
+ return String(total+section+(pending??0));
+}
+function spokenBody(body,unit){
+ let s=body.replace(/(?<![가-힣\d,.])[\d영일이삼사오육칠팔구십백천만억]+(?:\.\d+[십백천만억]?)?(?=\s|$|[은는을를건,]|기가|이상|이하)/g,
+  token=>/[가-힣]/.test(token)?koreanAmount(token):token);
+ if(unit==='Gbps'||unit==='GB')s=s.replace(/(\d)\s*기가(?![바비])/g,'$1 '+unit);
+ return s.replace(/안\s*넘어야|넘(?:으면\s*안\s*(?:돼요?|되(?:나요|는데|면)?|됩니다)|지\s*(?:않아야|않는|말아야))|넘어서는\s*안\s*돼/g,' 이하 ')
+  .replace(/넘어야|넘는|넘게/g,' 초과 ')
+  .replace(/초당|([0-9만억])\s*건/g,'$1 ')
+  .replace(/(?:은|는|을|를)?\s*(?:나와야|되어야|돼야|필요하|충족하)(?:\s*(?:하고요|하고|해요|해|돼요|돼|한다))?|(?:이?면)\s*(?:돼요|돼|됩니다)/g,' ')
+  .replace(/([0-9])(?:은|는|을|를)/g,'$1').replace(/(초과|이상|미만|이하)\s*(?:하고|해요|해|합니다)/g,'$1');
+}
 function parseBody(key,label,unit,body,source){
- let rest=body, result=[], algorithm='unspecified';
+ let rest=spokenBody(body,unit), result=[], algorithm='unspecified';
  if(key==='ssl_tps'){
   const alg=source.match(/rsa\s*[-:(]?\s*(2\s*k|4\s*k|2048|4096)\s*(?:bits?)?/i);
   if(alg)algorithm=/^(?:2\s*k|2048)$/i.test(alg[1])?'rsa2048':'rsa4096';
@@ -90,6 +120,10 @@ function parseBody(key,label,unit,body,source){
  const req=metric(key,value,source,{label,unit,operator:op,algorithm,
   context:key==='dns_qps'&&/dns\s*express/i.test(source)?'dns_express':key==='cpu_cores'&&/물리|physical/i.test(source)?'physical':'unspecified',
   note:!m[2]?`단위가 없으면 ${unit}로 해석합니다. 추출 결과를 확인하세요.`:''});
+ if(key==='ssl_tps'&&algorithm==='unspecified'&&!/rsa|ecdsa|키\s*길이/i.test(source)){
+  req.ambiguity='ssl';req.label='SSL TPS';
+ }
+ if(key==='generic_gbps'&&/^(throughput|처리\s*성능)/i.test(source))req.ambiguity='layer';
  result.unshift(req);
  if(scrub(rest))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`,attachedUnit||/\d/.test(rest)));
  return {requirements:result};
@@ -194,6 +228,18 @@ export function parseRequirements(input,groupName=''){
  return out.map((r,i)=>({...r,id:`req-${i+1}`,userEdited:false}));
 }
 export function parseGroups(input){
+ // Compact two-site requests with an explicit relative bandwidth and shared memory.
+ const sites=String(input).trim().match(/^(본점|본사)(?:은|는)?\s*(?:(엘포|엘세븐|L4|L7)\s*)?(\d+(?:\.\d+)?)\s*기가\s*,\s*(DR)(?:은|는)?\s*그\s*절반\s*,\s*메모리(?:는|은)?\s*둘\s*다\s*(\d+(?:\.\d+)?)(?:\s*기가)?[.!]?\s*$/i);
+ if(sites){
+  const [,hq,layer,bandwidth,dr,memory]=sites;
+  const clauses=String(input).trim().split(/\s*,\s*/);
+  return [hq,dr].map((name,i)=>{
+   const key=layer?(/엘포|L4/i.test(layer)?'l4_gbps':'l7_gbps'):'generic_gbps';
+   const rate=metric(key,i===0?Number(bandwidth):Number(bandwidth)/2,clauses[i],{id:'req-1',userEdited:false});
+   if(!layer)rate.ambiguity='layer';
+   return {name,kind:'adc',quantity:'',requirements:[rate,metric('memory_gb',Number(memory),clauses[2],{id:'req-2',userEdited:false})]};
+  });
+ }
  const groups=[];let current={name:'요구사항',quantity:'',kind:'adc',lines:[]};
  for(const raw of normalizeText(input).split('\n')){
   const line=raw.trim();

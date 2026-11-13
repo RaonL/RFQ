@@ -1,15 +1,28 @@
-import {parseGroups,LABELS,splitRequirements} from './parser.mjs';
-import {normalizeCatalogue,rankModels,formatNumber,reportText} from './matching.mjs';
+import {parseGroups,LABELS} from './parser.mjs';
+import {normalizeCatalogue,rankModels,formatNumber,reportText,interpretations,interpret,materialQuestions} from './matching.mjs';
 import {extractFile} from './files.mjs';
 const $=id=>document.getElementById(id);
 const state={reference:null,groups:[],evaluations:[],fileGeneration:0};
 const example='[L4 장비]\nL4 Throughput 20Gbps 이상\nL7 Throughput 13Gbps 이상\nSSL TPS (RSA 2048bit) 7000 이상\nConcurrent Connection 19M 이상\nMemory 32GB 이상\n25G SFP28 4Port 이상\n10G Copper 4Port 이상\nSSD 480GB 이상';
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function message(text){$('messages').textContent=text;}
-function invalidateResults(){state.evaluations=[];$('results').hidden=true;$('reviewed').checked=false;$('compare').disabled=true;}
+function invalidateResults(){state.evaluations=[];$('results').hidden=true;refreshQuestions();}
 function invalidateDraft(){state.fileGeneration++;state.groups=[];$('draft').hidden=true;invalidateResults();}
 function fieldSelect(options,value,fn){const s=el('select');for(const [key,label] of options){const opt=el('option',label);opt.value=key;s.append(opt);}s.value=value;s.addEventListener('change',()=>{fn(s.value);invalidateResults();});return s;}
 function contextEditor(r){
+ if(r.ambiguity||r.originalAmbiguity){
+  const type=r.originalAmbiguity??r.ambiguity,choices=interpretations[type];
+  const selected=r.deferred?'unknown':r.ambiguity?'':r.key;
+  return fieldSelect([['','기준 미지정'],...choices.map(c=>[c.key,c.name]),['unknown','모름 · 다른 조건만 비교']],selected,v=>{
+   const choice=choices.find(c=>c.key===v);
+   if(choice)Object.assign(r,interpret(r,choice));
+   else {
+    r.ambiguity=type;r.deferred=v==='unknown';r.key=type==='ssl'?'ssl_tps':'generic_gbps';
+    Object.assign(r,LABELS[r.key]);if(type==='ssl')r.label='SSL TPS';r.algorithm='unspecified';
+   }
+   r.originalAmbiguity=type;r.userEdited=true;renderDraft();
+  });
+ }
  if(r.key==='ssl_tps')return fieldSelect([['unspecified','RSA 기준 확인 필요'],['rsa2048','RSA 2048'],['rsa4096','RSA 4096']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
  if(r.key==='ecdsa_tps')return fieldSelect([['unspecified','곡선 미지정 · 수치 우선 비교'],['ecdsa_p256','ECDSA P-256'],['ecdsa_p384','ECDSA P-384']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
  if(r.key==='cpu_cores')return fieldSelect([['unspecified','코어 기준 확인 필요'],['physical','물리 코어']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;});
@@ -32,27 +45,48 @@ function labelNarrowCell(cell, text){
  label.setAttribute('aria-hidden','true');
  cell.prepend(label);
 }
+const prompts=new Map();
+function refreshQuestions(){
+ let count=0;
+ const models=state.groups.some(g=>g.requirements.some(r=>r.ambiguity&&!r.deferred))
+  ?normalizeCatalogue(state.reference,$('include-excluded').checked).models:[];
+ for(const group of state.groups){
+  const needed=group.kind==='log'?new Set():materialQuestions(models,group.requirements);
+  for(const r of group.requirements){
+   const prompt=prompts.get(r);if(prompt)prompt.hidden=!needed.has(r);
+  }
+  count+=needed.size;
+ }
+ $('question-count').textContent=count?`후보가 달라지는 조건 ${count}개를 선택하세요.`:'';
+ $('compare').disabled=!state.groups.length||count>0;
+}
 function renderDraft(){
+ prompts.clear();
  const host=$('draft-groups');host.replaceChildren();let count=0,reviewCount=0;
  for(const group of state.groups){
   host.append(el('h3',group.name+(group.quantity?' · '+group.quantity:'')));
-  const table=el('table',undefined,'draft-table'),head=el('tr');for(const title of ['해석 항목 / 시험 기준','조건','값','단위','원문 · 확인 사항'])head.append(el('th',title));table.append(head);
-  const {comparison,review}=splitRequirements(group.requirements);reviewCount+=review.length;
-  for(const r of comparison){count++;const tr=el('tr'),name=el('td');
+  const table=el('table',undefined,'draft-table'),head=el('tr');for(const title of ['원문','해석 항목 / 시험 기준','조건','요구값','단위'])head.append(el('th',title));table.append(head);
+  const comparison=group.requirements.filter(r=>r.kind==='numeric'||r.blocksNumeric);
+  const review=group.requirements.filter(r=>r.kind!=='numeric'&&!r.blocksNumeric);reviewCount+=review.length+comparison.filter(r=>r.deferred).length;
+  for(const r of comparison){if(!r.deferred)count++;const tr=el('tr'),name=el('td');
    const opts=[['','수동 확인 / 미해석'],...Object.entries(LABELS).map(([k,d])=>[k,d.label])];
-   const select=fieldSelect(opts,LABELS[r.key]?r.key:'',v=>{if(v){r.key=v;Object.assign(r,LABELS[v]);r.kind='numeric';r.algorithm='unspecified';r.context='unspecified';r.userEdited=true;renderDraft();}});select.setAttribute('aria-label','해석 항목');name.append(select);
-   const ctx=contextEditor(r);if(ctx){ctx.setAttribute('aria-label',r.key+' 시험 기준');name.append(ctx);}if(r.userEdited)name.append(el('small','수동 수정 · 원문과 대조 필요'));
+   if(r.ambiguity==='ssl')opts.find(o=>o[0]==='ssl_tps')[1]='SSL TPS';
+   const select=fieldSelect(opts,LABELS[r.key]?r.key:'',v=>{if(v){r.key=v;Object.assign(r,LABELS[v]);r.kind='numeric';r.algorithm='unspecified';r.context='unspecified';r.ambiguity=null;r.originalAmbiguity=null;r.deferred=false;r.userEdited=true;renderDraft();}});select.setAttribute('aria-label','해석 항목');name.append(select);
+   if(r.ambiguity){const prompt=el('small',r.ambiguity==='ssl'?'어떤 SSL 시험 기준인가요?':'어느 계층의 처리량인가요?','clarification');name.append(prompt);prompts.set(r,prompt);}
+   const ctx=contextEditor(r);if(ctx){ctx.setAttribute('aria-label',r.key+' 시험 기준');name.append(ctx);}
    const op=el('td'),value=el('td'),unit=el('td',r.unit),src=el('td');
-   const opInput=fieldSelect(['>=','<=','>','<','='].map(x=>[x,x]),r.operator,v=>{r.operator=v;r.userEdited=true;});opInput.disabled=r.kind!=='numeric';opInput.setAttribute('aria-label',r.label+' 비교 조건');op.append(opInput);
+   const opInput=fieldSelect([['>=','이상'],['<=','이하'],['>','초과'],['<','미만'],['=','같음']],r.operator,v=>{r.operator=v;r.userEdited=true;});opInput.disabled=r.kind!=='numeric';opInput.setAttribute('aria-label',r.label+' 비교 조건');op.append(opInput);
    if(r.kind==='numeric'){const num=el('input');num.type='number';num.step='any';num.min='0';num.value=r.value??'';num.setAttribute('aria-label',r.label+' 요구값');num.addEventListener('input',()=>{r.value=num.valueAsNumber;r.userEdited=true;invalidateResults();});value.append(num);}else value.textContent=r.kind==='boolean'?'필수':'확인 필요';
-   const detail=el('details'),sum=el('summary','원문 보기');detail.append(sum,el('pre',r.source));if(r.note)detail.append(el('small',r.note));src.append(detail);
+   src.textContent=r.source;src.className='source-clause';
+   labelNarrowCell(src,'원문');
+   if(r.note)src.title=r.note;
    labelNarrowCell(op,'조건');labelNarrowCell(value,'요구값');labelNarrowCell(unit,'단위');
-   tr.append(name,op,value,unit,src);table.append(tr);
+   tr.append(src,name,op,value,unit);table.append(tr);
   }
   if(comparison.length){const scroll=el('div',undefined,'scroll');scroll.append(table);host.append(scroll);}else host.append(el('p','비교할 수치가 없습니다. 별도 검토에서 항목을 지정하거나 요구 수치를 입력하세요.','hint'));
   const reviewDetail=renderReview(review,true);if(reviewDetail)host.append(reviewDetail);
  }
- $('draft-count').textContent=`${state.groups.length}개 그룹 · 수치 ${count}개 · 별도 검토 ${reviewCount}개`;$('draft').hidden=false;
+ $('draft-count').textContent=`${state.groups.length}개 그룹 · 수치 ${count}개 · 별도 검토 ${reviewCount}개`;$('draft').hidden=false;refreshQuestions();
 }
 function badge(status){return el('span',status==='pass'?'수치상 충족':status==='fail'?'미충족':'확인 필요','badge '+status);}
 function renderChecks(ev){
@@ -118,7 +152,7 @@ function renderGslbCandidates(evaluations){
  return section;
 }
 function compare(){
- if(!$('reviewed').checked)return;
+ if($('compare').disabled)return;
  const catalogue=normalizeCatalogue(state.reference,$('include-excluded').checked),host=$('result-groups');host.replaceChildren();state.evaluations=[];
  for(const group of state.groups){
   const card=el('section',undefined,'result-card');card.append(el('h3',group.name));
@@ -151,8 +185,7 @@ function compare(){
 $('requirements').addEventListener('input',()=>{invalidateDraft();message('입력이 변경되었습니다. 다시 추출해 주세요.');});
 $('example').addEventListener('click',()=>{$('requirements').value=example;invalidateDraft();message('예시를 입력했습니다. 요구사항 추출을 눌러 주세요.');});
 $('include-excluded').addEventListener('change',invalidateResults);
-$('parse').addEventListener('click',()=>{try{invalidateResults();state.groups=parseGroups($('requirements').value);if(!state.groups.length)throw new Error('추출할 요구조건이 없습니다.');renderDraft();message('수치 요구조건을 추출했습니다. 기능·문구는 별도 검토로 모았습니다. 값을 확인한 뒤 비교하세요.');}catch(e){state.groups=[];$('draft').hidden=true;message(e.message);}});
-$('reviewed').addEventListener('change',()=>{$('compare').disabled=!$('reviewed').checked;});
+$('parse').addEventListener('click',()=>{try{invalidateResults();state.groups=parseGroups($('requirements').value);if(!state.groups.length)throw new Error('추출할 요구조건이 없습니다.');renderDraft();message('수치 요구조건을 추출했습니다.');$('draft-title').focus();}catch(e){state.groups=[];$('draft').hidden=true;message(e.message);}});
 $('compare').addEventListener('click',()=>{try{compare();}catch(e){message(e.message);}});
 $('file').addEventListener('change',async()=>{
  const file=$('file').files[0];if(!file)return;invalidateDraft();const generation=state.fileGeneration;message('브라우저에서 파일을 읽는 중입니다…');$('parse').disabled=true;

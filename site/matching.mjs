@@ -1,5 +1,5 @@
 /** Numerical comparisons and evidence approval are intentionally separate. */
-import { PORT_SPEEDS, quantity, splitRequirements } from './parser.mjs';
+import { LABELS, PORT_SPEEDS, quantity, splitRequirements } from './parser.mjs';
 const RSERIES='https://www.f5.com/content/dam/f5/corp/global/pdf/data-sheet/f5-application-delivery-controller-system-rseries-data-sheet.pdf';
 const DNS='https://cdn.studio.f5.com/files/k6fem79d/production/e34b659aa50f6d9f5006a487b2865f708128dab2.pdf';
 const DNS_CONDITIONS='BIG-IP DNS 데이터시트 18쪽 · DNS Express 권한 DNS 최대 Query RPS';
@@ -61,9 +61,36 @@ function physicalFit(pools,requirements){
  }
  return flow>=needed;
 }
+export const interpretations={
+ ssl:[{name:'RSA 2048',key:'ssl_tps',algorithm:'rsa2048'},{name:'ECDSA P-256',key:'ecdsa_tps',algorithm:'ecdsa_p256'}],
+ layer:[{name:'L4 처리량',key:'l4_gbps'},{name:'L7 처리량',key:'l7_gbps'}]
+};
+export function interpret(r,choice){
+ return {...r,...LABELS[choice.key],key:choice.key,algorithm:choice.algorithm??'unspecified',ambiguity:null,deferred:false};
+}
+export function materialQuestions(models,requirements){
+ const open=requirements.filter(r=>r.ambiguity&&!r.deferred);
+ if(!open.length)return new Set();
+ const fixed=requirements.filter(r=>!r.ambiguity&&!r.deferred);
+ const eligible=models.filter(m=>!evaluateModel(m,fixed).checks.some(c=>c.status!=='pass'));
+ const questions=new Set();
+ for(const model of eligible){
+  const possible=open.map(r=>interpretations[r.ambiguity].map(choice=>evaluateModel(model,[interpret(r,choice)]).numericCandidate));
+  if(possible.every(options=>options.some(Boolean))){
+   possible.forEach((options,i)=>{if(!options.every(Boolean))questions.add(open[i]);});
+  }
+ }
+ return questions;
+}
 export function evaluateModel(model,requirements){
  const {comparison,review:reviewRequirements}=splitRequirements(requirements);
  const checks=comparison.map(r=>{
+  if(r.ambiguity){
+   const variants=interpretations[r.ambiguity].map(choice=>evaluateModel(model,[interpret(r,choice)]).checks[0]);
+   const same=variants.every(v=>v.status===variants[0].status);
+   return {...r,actual:null,status:same?variants[0].status:'unknown',conditionPending:true,evidenceVerified:false,
+    reason:variants.map(v=>`${v.label}: ${formatNumber(v.actual,v.unit)}`).join(' / '),evidenceNote:'가능한 두 시험 기준을 각각 비교했습니다.'};
+  }
   let actual=model.metrics[r.key]??null,status='unknown',reason=r.note??'',conditionPending=false;
   let serviceSource='',serviceNote='',comparisonBasis='',label=r.label;
   const gslb=r.key==='gslb_rps'||(r.key==='dns_qps'&&r.context==='gslb');
