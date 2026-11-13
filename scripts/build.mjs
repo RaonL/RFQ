@@ -10,8 +10,9 @@ try{reference=JSON.parse(await readFile(source,'utf8'));}catch(e){throw new Erro
 if(!Array.isArray(reference.f5_models)||!reference.f5_models.length)throw new Error('등록 장비가 없거나 기준 JSON 형식이 잘못되었습니다.');
 if(!fixture&&reference.fixture)throw new Error('시험용 사양은 실제 배포에 사용할 수 없습니다.');
 const allowed=new Set(['L4/L7 Throughput','L4 CPS','L7 RPS (HTTP)','SSL TPS (RSA 2K)','SSL TPS RSA 2K','SSL Bulk','동시 커넥션','인터페이스','Memory','Storage','CPU / Tenancy','CPU (Total)']);
+const servicePerformance=fixture?{}:JSON.parse(await readFile(join(root,'data/service_performance.json'),'utf8'));
 const catalogue={schema_version:2,fixture,source_note:'원본 등록값 재사용. 공식 개정/라이선스/시험조건 재검토 필요.',sources:(reference.sources??[]).map(s=>({type:s.type,name:s.name})),
- f5_models:reference.f5_models.map(m=>({model:m.model,tier:m.tier,series:m.series,specs:Object.fromEntries(Object.entries(m.specs??{}).filter(([k])=>allowed.has(k))),metrics:m.metrics??{},metric_evidence:m.metric_evidence??{}})),
+ f5_models:reference.f5_models.map(m=>({model:m.model,tier:m.tier,series:m.series,specs:Object.fromEntries(Object.entries(m.specs??{}).filter(([k])=>allowed.has(k))),metrics:m.metrics??{},metric_evidence:m.metric_evidence??{},servicePerformance:servicePerformance[m.model]})),
  comparisons:(reference.comparisons??[]).map(c=>({f5_model:c.f5_model,competitors:c.competitors??[],rows:c.rows??[]}))};
 const output=join(root,fixture?'dist-fixture':'dist');
 try{if((await lstat(output)).isSymbolicLink())throw new Error('배포 폴더 심볼릭 링크는 허용하지 않습니다.');}catch(e){if(e.code!=='ENOENT')throw e;}

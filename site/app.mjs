@@ -1,4 +1,4 @@
-import {parseGroups,LABELS,splitRequirements} from './parser.mjs';
+import {parseGroups,LABELS,SSLO_PROFILES,SSLO_DIRECTIONS,splitRequirements} from './parser.mjs';
 import {normalizeCatalogue,rankModels,formatNumber,reportText} from './matching.mjs';
 import {extractFile} from './files.mjs';
 const $=id=>document.getElementById(id);
@@ -10,6 +10,16 @@ function invalidateResults(){state.evaluations=[];$('results').hidden=true;$('re
 function invalidateDraft(){state.fileGeneration++;state.groups=[];$('draft').hidden=true;invalidateResults();}
 function fieldSelect(options,value,fn){const s=el('select');for(const [key,label] of options){const opt=el('option',label);opt.value=key;s.append(opt);}s.value=value;s.addEventListener('change',()=>{fn(s.value);invalidateResults();});return s;}
 function contextEditor(r){
+ if(r.key==='sslo_gbps'||r.key==='sslo_tps'){
+  const fields=document.createDocumentFragment();
+  const add=(key,options,prompt)=>{
+   const s=fieldSelect([['unspecified',prompt],...Object.entries(options)],r[key]??'unspecified',v=>{r[key]=v;r.userEdited=true;});
+   s.setAttribute('aria-label',prompt);fields.append(s);
+  };
+  add('profile',SSLO_PROFILES,'SSLO 서비스 구성 선택');
+  if(r.key==='sslo_tps')add('direction',SSLO_DIRECTIONS,'SSLO 트래픽 방향 선택');
+  return fields;
+ }
  if(r.key==='ssl_tps')return fieldSelect([['unspecified','RSA 기준 확인 필요'],['rsa2048','RSA 2048'],['rsa4096','RSA 4096']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
  if(r.key==='ecdsa_tps')return fieldSelect([['unspecified','곡선 미지정 · 수치 우선 비교'],['ecdsa_p256','ECDSA P-256'],['ecdsa_p384','ECDSA P-384']],r.algorithm??'unspecified',v=>{r.algorithm=v;r.userEdited=true;});
  if(r.key==='cpu_cores')return fieldSelect([['unspecified','코어 기준 확인 필요'],['physical','물리 코어']],r.context??'unspecified',v=>{r.context=v;r.userEdited=true;});
@@ -41,7 +51,7 @@ function renderDraft(){
   for(const r of comparison){count++;const tr=el('tr'),name=el('td');
    const opts=[['','수동 확인 / 미해석'],...Object.entries(LABELS).map(([k,d])=>[k,d.label])];
    const select=fieldSelect(opts,LABELS[r.key]?r.key:'',v=>{if(v){r.key=v;Object.assign(r,LABELS[v]);r.kind='numeric';r.algorithm='unspecified';r.context='unspecified';r.userEdited=true;renderDraft();}});select.setAttribute('aria-label','해석 항목');name.append(select);
-   const ctx=contextEditor(r);if(ctx){ctx.setAttribute('aria-label',r.key+' 시험 기준');name.append(ctx);}if(r.userEdited)name.append(el('small','수동 수정 · 원문과 대조 필요'));
+   const ctx=contextEditor(r);if(ctx){if(ctx.nodeType===Node.ELEMENT_NODE)ctx.setAttribute('aria-label',r.key+' 시험 기준');name.append(ctx);}if(r.userEdited)name.append(el('small','수동 수정 · 원문과 대조 필요'));
    const op=el('td'),value=el('td'),unit=el('td',r.unit),src=el('td');
    const opInput=fieldSelect(['>=','<=','>','<','='].map(x=>[x,x]),r.operator,v=>{r.operator=v;r.userEdited=true;});opInput.disabled=r.kind!=='numeric';opInput.setAttribute('aria-label',r.label+' 비교 조건');op.append(opInput);
    if(r.kind==='numeric'){const num=el('input');num.type='number';num.step='any';num.min='0';num.value=r.value??'';num.setAttribute('aria-label',r.label+' 요구값');num.addEventListener('input',()=>{r.value=num.valueAsNumber;r.userEdited=true;invalidateResults();});value.append(num);}else value.textContent=r.kind==='boolean'?'필수':'확인 필요';
@@ -62,6 +72,7 @@ function renderChecks(ev){
   if(/^https:\/\//.test(c.sourceUrl??'')){const a=el('a','등록 원문 링크');a.href=c.sourceUrl;a.target='_blank';a.rel='noopener noreferrer';detail.append(a);}note.append(detail);
   const operator=c.kind==='numeric'?({'<=':'≤','>=':'≥'}[c.operator]??c.operator??''):'';
   const required=el('td',`${operator} ${formatNumber(c.value,c.unit)}`.trim()),actual=el('td',formatNumber(c.actual,c.unit));
+  if(c.referenceValue!=null)actual.append(el('small','DNS Express 참고 '+formatNumber(c.referenceValue,'RPS')));
   labelNarrowCell(required,'요구 조건');labelNarrowCell(actual,'등록값');
   tr.append(el('td',c.label),required,actual,status,note);table.append(tr);
  }
@@ -74,7 +85,16 @@ function renderCatalogue(){
   let family=/r[24]\d{3}/i.exec(m.model)?.[0][1];
   const file=family?`r${family}000-front-view.png`:/r5\d{3}/i.test(m.model)?'r5000-front-view.png':/r10\d{3}/i.test(m.model)?'r10000-front-view.png':null;
   if(file&&!state.reference.fixture){const img=el('img');img.src='./platforms/'+file;img.alt=m.model+' 계열 전면 참고 이미지';img.className='platform-image';img.addEventListener('error',()=>img.remove());host.append(img);}
-  const table=el('table');for(const [label,value] of Object.entries(m.rawSpecs)){const row=el('tr');row.append(el('th',label),el('td',String(value)));table.append(row);}const wrap=el('div',undefined,'scroll');wrap.append(table);host.append(wrap,el('p','위 표와 판정기는 같은 등록 자료를 사용합니다. 최신 공식 사양과 다른 항목은 기준 파일부터 수정해야 합니다.','hint'));
+  const table=el('table');for(const [label,value] of Object.entries(m.rawSpecs)){const row=el('tr');row.append(el('th',label),el('td',String(value)));table.append(row);}const wrap=el('div',undefined,'scroll');wrap.append(table);host.append(wrap);
+  if(m.servicePerformance.dns_qps)host.append(el('p','DNS Express 최대 Query RPS · '+formatNumber(m.servicePerformance.dns_qps,'RPS')+' (GSLB 검토 참고값)'));
+  if(m.servicePerformance.sslo){
+   host.append(el('h4','SSLO 서비스 구성별 성능'));
+   const specs=el('table'),head=el('tr');for(const title of ['구성','최대 처리량','아웃바운드 TPS','인바운드 TPS'])head.append(el('th',title));specs.append(head);
+   for(const [profile,v] of Object.entries(m.servicePerformance.sslo)){
+    const row=el('tr');row.append(el('th',SSLO_PROFILES[profile]),el('td',formatNumber(v.gbps,'Gbps')),el('td',formatNumber(v.outbound_tps)),el('td',formatNumber(v.inbound_tps)));specs.append(row);
+   }
+   const scroll=el('div',undefined,'scroll');scroll.append(specs);host.append(scroll);
+  }
  };picker.addEventListener('change',show);show();
 }
 function competitorTable(modelName){

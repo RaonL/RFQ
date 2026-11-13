@@ -1,0 +1,44 @@
+{
+  "F5 r2600": {"dns_qps": 590000},
+  "F5 r2800": {
+    "dns_qps": 1100000,
+    "sslo": {
+      "receive": {"gbps": 5, "outbound_tps": 6700, "inbound_tps": 11000},
+      "inline": {"gbps": 4.8, "outbound_tps": 6400, "inbound_tps": 11000},
+      "inline_l2_1": {"gbps": 3.5, "outbound_tps": 5700, "inbound_tps": 10300},
+      "inline_l2_2": {"gbps": 2.8, "outbound_tps": 5000, "inbound_tps": 8500}
+    }
+  },
+  "F5 r4600": {"dns_qps": 1800000},
+  "F5 r4800": {
+    "dns_qps": 2500000,
+    "sslo": {
+      "receive": {"gbps": 12, "outbound_tps": 15500, "inbound_tps": 20000},
+      "inline": {"gbps": 11.5, "outbound_tps": 15200, "inbound_tps": 21000},
+      "inline_l2_1": {"gbps": 8.6, "outbound_tps": 13300, "inbound_tps": 20000},
+      "inline_l2_2": {"gbps": 7, "outbound_tps": 11800, "inbound_tps": 19000}
+    }
+  },
+  "F5 r5600": {"dns_qps": 2700000},
+  "F5 r5800": {"dns_qps": 3800000},
+  "F5 r5900": {
+    "dns_qps": 4900000,
+    "sslo": {
+      "receive": {"gbps": 21.8, "outbound_tps": 26700, "inbound_tps": 55000},
+      "inline": {"gbps": 23, "outbound_tps": 26400, "inbound_tps": 53400},
+      "inline_l2_1": {"gbps": 18.8, "outbound_tps": 23000, "inbound_tps": 42800},
+      "inline_l2_2": {"gbps": 15, "outbound_tps": 20500, "inbound_tps": 36100}
+    }
+  },
+  "F5 r10600": {"dns_qps": 5000000},
+  "F5 r10800": {"dns_qps": 5700000},
+  "F5 r10900": {
+    "dns_qps": 6900000,
+    "sslo": {
+      "receive": {"gbps": 31, "outbound_tps": 36500, "inbound_tps": 70800},
+      "inline": {"gbps": 37.7, "outbound_tps": 37300, "inbound_tps": 67500},
+      "inline_l2_1": {"gbps": 31.4, "outbound_tps": 32700, "inbound_tps": 59200},
+      "inline_l2_2": {"gbps": 23, "outbound_tps": 29300, "inbound_tps": 51100}
+    }
+  }
+}

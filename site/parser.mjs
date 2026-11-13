@@ -1,8 +1,9 @@
 /** Conservative RFQ extraction. Never treats an unparsed clause as compliance. */
 export const METRICS = [
+ ['gslb_rps','GSLB Query RPS','RPS',/(?:dns\s+)?gslb(?:\s*(?:max(?:imum)?\s*)?(?:query|쿼리))?(?:\s*(?:rps|qps|성능))?/ig],
  ['l4_rps','L4 HTTP RPS','RPS',/\bl4\s*(?:http\s*)?(?:rps|requests per second)/ig],
  ['l7_rps','L7 HTTP RPS','RPS',/\bl7\s*(?:http\s*)?(?:rps|requests per second)/ig],
- ['dns_qps','DNS Query QPS/RPS','QPS',/(?:maximum\s*query\s*rps|(?:초당\s*)?dns\s*(?:(?:express|query|쿼리)\s*)?(?:qps|rps|쿼리)|\bqps\b)/ig],
+ ['dns_qps','DNS Query QPS/RPS','QPS',/(?:(?:dns\s+express\s+)?max(?:imum)?\s*query\s*rps|(?:초당\s*)?dns\s*(?:express\s*)?(?:(?:query|쿼리)\s*)?(?:qps|rps|쿼리)|\bqps\b)/ig],
  ['ssl_gbps','SSL/TLS Throughput','Gbps',/(?:ssl|tls)(?:\/tls)?\s*(?:throughput|처리량|bulk)/ig],
  ['ecdsa_tps','ECDSA TPS','TPS',/ecdsa(?:\s*p[- ]?\d+)?\s*tps/ig],
  ['ssl_tps','SSL RSA TPS','TPS',/(?:ssl|tls)(?:\/tls)?\s*(?:(?:rsa\s*)?(?:2k|4k|2048(?:bit)?|4096(?:bit)?)\s*)?tps/ig],
@@ -25,6 +26,10 @@ export const METRICS = [
 ];
 export const PORT_SPEEDS = {sfp_1g_ports:1,sfp_plus_10g_ports:10,sfp28_25g_ports:25,copper_1g_ports:1,copper_10g_ports:10,qsfp_40g_ports:40,qsfp28_100g_ports:100};
 export const LABELS = Object.fromEntries(METRICS.map(([key,label,unit])=>[key,{label,unit}]));
+Object.assign(LABELS,{sslo_gbps:{label:'SSLO 처리량',unit:'Gbps'},sslo_tps:{label:'SSLO TPS',unit:'TPS'}});
+export const SSLO_PROFILES={receive:'수신 전용',inline:'L3 인라인',inline_l2_1:'L3 인라인 + L2 1개',inline_l2_2:'L3 인라인 + L2 2개'};
+export const SSLO_DIRECTIONS={inbound:'인바운드',outbound:'아웃바운드'};
+const SSLO=/\b(?:sslo|ssl\s+orchestrator)\b/i;
 for(const [key,speed] of Object.entries(PORT_SPEEDS)) LABELS[key]={label:`${speed}G ${key.startsWith('copper')?'Copper':'광'} Port`,unit:'Port'};
 const FEATURES=[
  ['redundant_power','전원 이중화',/(?:전원(?:부)?|power|psu)(?:\s*[,/]\s*(?:fan|팬))?\s*(?:이중화|redundant|dual)/ig],
@@ -38,7 +43,7 @@ const FEATURES=[
  ['integrity_document','무결성 확인서',/악의적인\s*백도어\s*미설치\s*확인서|백도어\s*미설치\s*확인서|무결성\s*확인서/ig]
 ];
 const NUMBER=/(\d[\d,]*(?:\.\d+)?)\s*(tbps|gbps|mbps|tbit\/s|gbit\/s|mbit\/s|tb|gb|mb|tib|gib|mib|억|만|ghz|mhz|vcpus?|cores?|코어|k|m|g)?/ig;
-const HEADING=/^(?:\d+[.)]\s*)?(?:웹방화벽\s*\(waf\)|로그서버\s*\(waf\)|dns\s*gslb(?:\s*[-—–].*)?|l4\s*스위치(?:\s*요구사항)?|\[.+\])$/i;
+const HEADING=/^(?:\d+[.)]\s*)?(?:웹방화벽\s*\(waf\)|로그서버\s*\(waf\)|(?:dns\s*)?gslb|sslo|ssl\s+orchestrator|dns\s*gslb\s*[-—–]\s*\D+|l4\s*스위치(?:\s*요구사항)?|\[.+\])$/i;
 const IGNORE=/^(?:구분|주요\s*기능요건|수량|단위|비고|h\/w|인터페이스|주요기능|세부내용|세부\s*규격|성능\s*및\s*규격|요구규격\s*[:：]?)$/i;
 export function normalizeText(text){
  return String(text??'').replace(/\r\n?/g,'\n').replace(/&nbsp;/gi,' ').replace(/&gt;/gi,'>').replace(/&lt;/gi,'<').replace(/&amp;/gi,'&').replace(/\s+\|\s+/g,'\n').replace(/;/g,'\n');
@@ -83,6 +88,7 @@ function parseBody(key,label,unit,body,source){
  if(value===null||op===null||matches.length>1||/[-−]\s*\d/.test(rest))return {requirements:[...result,unknown(source,'수치·단위·범위 또는 비교 조건이 모호합니다. 한 항목에 한 수치 조건으로 정리하세요.')]};
  const attachedUnit=/^[a-z]/i.test(rest.slice(m.index+m[0].length))&&!/^(?:rps|cps|tps|cc|entry|entries|ports?)\b/i.test(rest.slice(m.index+m[0].length));
  rest=maskAt(rest,m.index,m.index+m[0].length);
+ if(key==='gslb_rps'||key==='dns_qps')rest=rest.replace(/\bqps\b/ig,' ');
  // Unit suffixes following K/M (e.g. 7K TPS) are syntax, not another condition.
  const req=metric(key,value,source,{label,unit,operator:op,algorithm,
   context:key==='dns_qps'&&/dns\s*express/i.test(source)?'dns_express':key==='cpu_cores'&&/물리|physical/i.test(source)?'physical':'unspecified',
@@ -91,7 +97,47 @@ function parseBody(key,label,unit,body,source){
  if(scrub(rest))result.push(unknown(source,`추가 확인할 구문: ${rest.trim()}`,attachedUnit||/\d/.test(rest)));
  return {requirements:result};
 }
+function parseSslo(line){
+ // Consume topology tokens before reading numbers, so L2/L3 are never thresholds.
+ let body=line.replace(SSLO,'').replace(/^\s*BIG-IP\b/i,'');
+ const key=/tps\b|transactions?\s*(?:per|\/)\s*second|초당\s*트랜잭션/i.test(body)?'sslo_tps':'sslo_gbps';
+ const {label,unit}=LABELS[key];
+ const inbound=/inbound|인바운드/i.test(body),outbound=/outbound|아웃바운드/i.test(body);
+ const direction=inbound===outbound?'unspecified':inbound?'inbound':'outbound';
+ body=body.replace(/(?:\bL3\s+)?(?:inbound|outbound|인바운드|아웃바운드)(?:\s+topology)?/ig,' ');
+ let profile='unspecified';
+ if(/receive[- ]only|수신\s*전용/i.test(body)){
+  profile='receive';body=body.replace(/receive[- ]only|수신\s*전용/i,' ');
+ }else if(/L3\s*(?:inline|인라인)/i.test(body)){
+  profile='inline';body=body.replace(/L3\s*(?:inline|인라인)(?:\s*service)?/i,' ');
+  if(/L2/i.test(body)){
+   const count=body.match(/(?:\(?([12])\)?\s*L2|L2\s*(?:서비스\s*)?([12])\s*개?)(?:\s*services?)?/i);
+   profile=count?'inline_l2_'+(count[1]??count[2]):'unspecified';
+   if(count)body=body.replace(count[0],' ');
+  }
+ }
+ body=body.replace(/(?:throughput|처리량|처리성능|성능|초당\s*트랜잭션|transactions?\s*(?:per|\/)\s*second|tps\b)/ig,' ');
+ const parsed=parseBody(key,label,unit,body,line);
+ for(const r of parsed.requirements){
+  if(r.kind==='numeric')Object.assign(r,{profile,direction});
+  else if(r.kind==='unknown')r.blocksNumeric=true;
+ }
+ if(parsed.missing)return {out:[],pending:{key,label,unit,source:line,profile,direction}};
+ return {out:parsed.requirements,pending:null};
+}
 function parseLine(line){
+ if(SSLO.test(line)){
+  const start=line.search(SSLO),prefix=line.slice(0,start).replace(/BIG-IP\s*$/i,'').trim();
+  const segment=line.slice(start);
+  // Separate adjacent metrics while retaining the original SSLO clause and its unit.
+  const next=segment.slice(segment.match(SSLO)[0].length).search(/\b(?:sslo|ssl\s+orchestrator|gslb|l[47]\s+(?:throughput|cps|rps)|memory|storage)\b/i);
+  const split=next<0?segment.length:segment.match(SSLO)[0].length+next;
+  const first=parseSslo(segment.slice(0,split));
+  if(prefix)first.out.unshift(...parseRequirements(prefix));
+  if(split===segment.length)return first;
+  if(first.pending)first.out.push(unknown(first.pending.source,'SSLO 요구 수치가 빠져 있습니다.',true));
+  const tail=parseLine(segment.slice(split));return {out:[...first.out,...tail.out],pending:tail.pending};
+ }
  const out=[]; let text=line;
  // BOM optics are not physical appliance ports. Retain their quantities for review.
  text=text.replace(/(?:지빅|gbic|transceiver|트랜시버)\s*(\d+)\s*g\s*[^,;]*?(\d+)\s*개(?:\([^)]*\))?/ig,(s,speed,count)=>{out.push(metric(`optics_${speed}g_count`,Number(count),s,{label:`${speed}G 트랜시버 공급`,unit:'개',note:'BOM 수량·장비별/전체 수량·정품·호환성 확인 필요'}));return ' ';});
@@ -111,6 +157,7 @@ function parseLine(line){
   if(spans.some(s=>h.start<s.end&&h.end>s.start))continue;
   // A trailing CPS after a number is a unit, not another metric heading.
   const previous=spans.at(-1);
+  if(h.key==='dns_qps'&&/^qps$/i.test(text.slice(h.start,h.end))&&['gslb_rps','dns_qps'].includes(previous?.key)&&/\d[\d,.]*\s*[km만억]?\s*$/i.test(text.slice(previous.end,h.start)))continue;
   if(h.key==='l4_cps'&&/^cps$/i.test(text.slice(h.start,h.end))&&previous?.key.endsWith('_cps')&&/\d[\d,.]*\s*[km]?\s*$/i.test(text.slice(previous.end,h.start))&&!/^\s*\d/.test(text.slice(h.end)))continue;
   spans.push(h);
  }
@@ -120,7 +167,6 @@ function parseLine(line){
  for(let i=0;i<spans.length;i++){
   const h=spans[i], end=spans[i+1]?.start??text.length, source=text.slice(h.start,end).trim();
   const parsed=parseBody(h.key,h.label,h.unit,text.slice(h.end,end),source);
-  if(h.key==='dns_qps'&&/gslb/i.test(line))for(const r of parsed.requirements)if(r.key==='dns_qps')r.context='gslb';
   out.push(...parsed.requirements);
   if(parsed.missing){if(i===spans.length-1)pending={...h,source};else out.push(unknown(source,'요구 수치가 빠져 있습니다.',true));}
  }
@@ -158,6 +204,7 @@ export function parseRequirements(input){
   if(pending){
    if(/^(?:요구규격\s*[:：]?\s*)?[<>≥≤=]*\s*\d/.test(line)){
     const r=parseBody(pending.key,pending.label,pending.unit,line,`${pending.source}\n${line}`);
+    if(pending.profile)for(const req of r.requirements)if(req.key===pending.key)Object.assign(req,{profile:pending.profile,direction:pending.direction});
     out.push(...r.requirements);if(r.missing)out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;continue;
    }
    out.push(unknown(pending.source,'요구 수치가 빠져 있습니다.',true));pending=null;
@@ -178,8 +225,12 @@ export function parseGroups(input){
  }
  if(current.lines.length)groups.push(current);
  return groups.map(({lines,...g})=>{
-  const requirements=parseRequirements(lines.join('\n'));
-  if(/gslb/i.test(g.name))for(const r of requirements)if(r.key==='dns_qps'&&r.context!=='dns_express')r.context='gslb';
+  const requirements=parseRequirements(lines.map(line=>{
+   if(SSLO.test(g.name)&&!SSLO.test(line)&&/throughput|처리량|tps\b|[gmt]bps/i.test(line)&&!/^\s*(?:제품사양|검토결과|요구규격\s*[:：]?\s*\d|\d)|\b(?:ssl|tls|l4|l7|http|waf)\b/i.test(line))return 'SSLO '+line;
+   if(/gslb/i.test(g.name)&&/^\s*rps\b/i.test(line))return 'GSLB '+line;
+   return line;
+  }).join('\n'));
+  if(/gslb/i.test(g.name))for(const r of requirements)if(r.key==='dns_qps'&&r.context!=='dns_express')Object.assign(r,LABELS.gslb_rps,{key:'gslb_rps'});
   return {...g,requirements};
  }).filter(g=>g.requirements.length);
 }
