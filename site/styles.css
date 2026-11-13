@@ -125,7 +125,12 @@ pre { font: inherit; }
 .result-stat { display: flex; flex-direction: column; padding: 6px 8px; border-top: 3px solid var(--status-mark); color: var(--status-ink); background: var(--status-fill); }
 .result-stat span { color: inherit; font-weight: 600; letter-spacing: 0; }
 .result-stat strong { font-size: 1.875rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.result-card > h4 { margin-top: 32px; }
+.checks-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 24px; margin-top: 32px; }
+.result-stat { border-bottom: 0; }
+.result-stat[aria-pressed=true] { outline: 2px solid var(--status-ink); outline-offset: -2px; }
+.result-stat:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.result-stat:disabled { border-color: var(--meta); color: var(--meta); background: var(--paper); }
+.result-card.filtered > :is(.candidate-difference,.gslb-candidates,.result-note,.hint,details) { display: none; }
 .candidate-difference { margin-block: 24px; }
 .candidate-difference h4 { margin-bottom: 8px; }
 .difference-row {

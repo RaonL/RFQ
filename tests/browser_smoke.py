@@ -56,6 +56,18 @@ with sync_playwright() as p:
   assert download.value.suggested_filename=='rfq-review.json';data=json.loads(Path(download.value.path()).read_text());assert data['format']=='f5-rfq-review-v2';checks.append('local JSON export')
   page.set_input_files('#file',{'name':'unsupported.bin','mimeType':'application/octet-stream','buffer':b'x'});page.wait_for_function("document.getElementById('messages').textContent.includes('지원 형식')");assert page.locator('#results').is_hidden();checks.append('starting a file import clears stale previous results even on failure')
   page.set_viewport_size({'width':390,'height':844});offline_load();page.click('#example');page.click('#parse');assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth') is True;page.screenshot(path=str(ART/'ui-mobile.png'),full_page=True);checks.append('mobile layout contained')
+  page.fill('#requirements','Memory 32GB 이상\nSSL TPS (RSA 4096) 7000 이상\nL4 Throughput 1000Gbps 이상')
+  page.click('#parse');page.click('#compare')
+  card=page.locator('#results .result-card')
+  rows=card.locator(':scope > .scroll tbody tr:visible')
+  for status in ['unknown','fail']:
+   button=card.locator('button.result-stat.'+status)
+   button.click()
+   assert button.get_attribute('aria-pressed')=='true'
+   assert rows.count()==1 and rows.first.get_attribute('class')==status
+  card.get_by_role('button',name='전체 보기',exact=True).click()
+  assert rows.count()==3
+  checks.append('mobile status buttons filter and restore the comparison rows')
   assert not errors,errors;assert not [r for r in requests if r[0]!='GET'],requests;assert not [r for r in requests if not r[1].startswith('http://127.0.0.1:8765')],requests;checks.append('offline DOM harness: no page errors')
   browser.close()
 (ART/'browser-results.json').write_text(json.dumps({'passed':len(checks),'checks':checks,'scope':'Offline DOM harness with fixture data, fetch replaced for local data only; network navigation prohibited; CSP/ESM/CDN/PDF/XLSX not exercised'},ensure_ascii=False,indent=2))

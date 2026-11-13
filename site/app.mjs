@@ -168,6 +168,47 @@ function renderChecks(ev){
  }
  const wrap=el('div',undefined,'scroll');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',ev.model.model+' 요구값과 등록값 비교표');wrap.append(table);return wrap;
 }
+function createCheckFilters(card,evaluation,checks){
+ const stats=el('div',undefined,'result-stats');
+ stats.setAttribute('role','group');
+ stats.setAttribute('aria-label',evaluation.model.model+' 판정별 항목 보기');
+ const heading=el('div',undefined,'checks-heading');
+ const title=el('h4','요구 수치와 등록값');
+ title.setAttribute('aria-live','polite');
+ const reset=el('button','전체 보기','subtle');
+ reset.type='button';
+ reset.hidden=true;
+ reset.setAttribute('aria-controls',checks.id);
+ heading.append(title,reset);
+ const rows=checks.querySelectorAll('tbody tr');
+ let active=null;
+ function select(button){
+  active=button;
+  for(const item of stats.children)item.setAttribute('aria-pressed',String(item===active));
+  for(const row of rows)row.hidden=Boolean(active)&&!row.classList.contains(active.dataset.status);
+  card.classList.toggle('filtered',Boolean(active));
+  reset.hidden=!active;
+  title.textContent=active?active.getAttribute('aria-label'):'요구 수치와 등록값';
+ }
+ for(const [status,label,count] of [['pass','수치상 충족',evaluation.passed],['fail','미충족',evaluation.failed],['unknown','확인 필요',evaluation.unknown]]){
+  const button=el('button',undefined,'result-stat subtle '+status);
+  button.type='button';
+  button.dataset.status=status;
+  button.disabled=count===0;
+  button.setAttribute('aria-label',label+' '+count+'건');
+  button.setAttribute('aria-controls',checks.id);
+  button.setAttribute('aria-pressed','false');
+  button.append(el('strong',String(count)),el('span',label));
+  button.addEventListener('click',()=>select(active===button?null:button));
+  stats.append(button);
+ }
+ reset.addEventListener('click',()=>{
+  const previous=active;
+  select(null);
+  previous.focus();
+ });
+ return {stats,heading};
+}
 function renderCatalogue(){
  const models=normalizeCatalogue(state.reference,true).models,picker=$('model-picker');picker.replaceChildren();
  for(const m of models){const o=el('option',m.model);o.value=m.model;picker.append(o);}
@@ -233,14 +274,16 @@ function compare(){
   const gslbList=renderGslbCandidates(evaluations);if(gslbList&&!difference)card.append(gslbList);
   const overview=el('div',undefined,'candidate-overview'),intro=el('div');
   intro.append(el('p',best.numericCandidate?'수치상 우선 검토 후보':best.failed?'요구 수치 미충족 모델':'수치 확인이 필요한 모델','summary'),el('p',best.model.model,'candidate-name'));overview.append(intro);
-  const stats=el('div',undefined,'result-stats');
-  for(const [label,value,cls] of [['수치상 충족',best.passed,'pass'],['미충족',best.failed,'fail'],['확인 필요',best.unknown,'unknown']]){const stat=el('div',undefined,'result-stat '+cls);stat.append(el('strong',String(value)),el('span',label));stats.append(stat);}overview.append(stats);card.append(overview);
+  const checks=renderChecks(best);
+  checks.id='result-checks-'+state.evaluations.length;
+  const {stats,heading}=createCheckFilters(card,best,checks);
+  overview.append(stats);card.append(overview);
   if(difference)card.append(difference);
   if(gslbList&&difference)card.append(gslbList);
   card.append(el('p',best.numericCandidate?`수치 ${best.checks.length}개를 모두 충족합니다. 기능 지원·시험조건은 아래에서 별도로 확인하세요.`:'전체 수치 조건을 확인한 모델이 없습니다. 아래 요구값과 등록값을 확인하세요.','result-note'));
   const conditionCount=best.checks.filter(c=>c.conditionPending&&c.status!=='unknown').length;
   if(conditionCount)card.append(el('p',`시험조건이 미지정된 ${conditionCount}개 항목은 수치만 우선 비교했습니다. 해당 행에 별도로 표시했습니다.`,'hint'));
-  card.append(el('h4','요구 수치와 등록값'),renderChecks(best));
+  card.append(heading,checks);
   const review=renderReview(best.reviewRequirements);if(review)card.append(review);
   const allModels=el('details',undefined,'model-comparison');allModels.append(el('summary',`전체 모델 ${evaluations.length}개 비교`));
   const table=el('table'),head=el('tr');for(const title of ['모델','구분','수치상 충족','미충족','수치 확인'])head.append(el('th',title));table.append(head);
